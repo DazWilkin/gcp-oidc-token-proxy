@@ -51,9 +51,7 @@ var (
 )
 var (
 	apiKey string
-)
-var (
-	creds oauth.TokenSource
+	creds  oauth.TokenSource
 )
 
 func init() {
@@ -67,7 +65,7 @@ func init() {
 
 	tokenSrc, err := google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
 	if err != nil {
-		log.Error(err, "Unable to determine default token source")
+		log.Error(err, "Unable to find GOOGLE_APPLICATON_CREDENTIALS in the environment")
 		os.Exit(1)
 	}
 
@@ -105,11 +103,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error(err, "Unable to read body")
 	}
+
 	log.Info("Body",
 		"Body", string(b),
 	)
-
-	client := *http.DefaultClient
 
 	tok, err := creds.Token()
 	if err != nil {
@@ -123,11 +120,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	id_token := tok.Extra("id_token").(string)
 
-	request := Request{
+	rqst := Request{
 		GrantType: "authorization_code",
 		Code:      id_token,
 	}
-	resp, err := client.PostForm(fmt.Sprintf("%s?key=%s", method, apiKey), request.Values())
+	client := *http.DefaultClient
+	resp, err := client.PostForm(fmt.Sprintf("%s?key=%s", method, apiKey), rqst.Values())
 	if err != nil {
 		log.Error(err, "Unable to POST against Google Secure Token endpoint")
 		return
