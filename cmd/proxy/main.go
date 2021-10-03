@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	stdlog "log"
-	"net"
 	"net/http"
 	"os"
 	"runtime"
@@ -45,32 +45,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"Path", r.URL.Path,
 		"Query", r.URL.RawQuery,
 	)
-}
-func metrics(port uint16) {
-	log := log.WithValues("func", "metrics")
-
-	endpoint := fmt.Sprintf("0.0.0.0:%d", port)
-	log = log.WithValues("endpoint", endpoint)
-
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.Handler())
-	s := &http.Server{
-		Addr:    endpoint,
-		Handler: mux,
-	}
-	listen, err := net.Listen("tcp", endpoint)
+	decoder := json.NewDecoder(r.Body)
+	var j interface{}
+	err := decoder.Decode(&j)
 	if err != nil {
-		log.Error(err, "unable to create listener",
-			"endpoint", endpoint,
+		log.Error(err, "unable to decode body",
+			"Body", r.Body,
 		)
 	}
-	log.Info("Starting Prometheus metrics exporter",
-		"endpoint", fmt.Sprintf("%s/metrics", endpoint),
-	)
-	log.Error(s.Serve(listen), "unable to serve")
+	s, err := json.Marshal(j)
+	if err != nil {
+		fmt.Fprint(w, err)
+	}
+	fmt.Fprintf(w, "%s", s)
 }
 func main() {
 	http.HandleFunc("/", handler)
+	http.Handle("/metrics", promhttp.Handler())
+
 	log.Error(http.ListenAndServe(
 		fmt.Sprintf(":%d", *port),
 		nil,
