@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/brabantcourt/ackal-cli/google/token_service"
+
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 
@@ -35,9 +37,18 @@ var (
 var (
 	log logr.Logger
 )
+var (
+	apiKey string
+)
 
 func init() {
 	log = stdr.NewWithOptions(stdlog.New(os.Stderr, "", stdlog.LstdFlags), stdr.Options{LogCaller: stdr.All})
+
+	apiKey = os.Getenv("API_KEY")
+	if apiKey == "" {
+		log.Error(nil, "Unable to find `API_KEY` in the environment")
+		os.Exit(1)
+	}
 }
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Info("Request",
@@ -45,19 +56,39 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"Path", r.URL.Path,
 		"Query", r.URL.RawQuery,
 	)
-	decoder := json.NewDecoder(r.Body)
-	var j interface{}
-	err := decoder.Decode(&j)
+	// decoder := json.NewDecoder(r.Body)
+	// var j interface{}
+	// err := decoder.Decode(&j)
+	// if err != nil {
+	// 	log.Error(err, "unable to decode body",
+	// 		"Body", r.Body,
+	// 	)
+	// }
+	// s, err := json.Marshal(j)
+	// if err != nil {
+	// 	fmt.Fprint(w, err)
+	// }
+	// fmt.Fprintf(w, "%s", s)
+
+	client, err := token_service.NewClient(apiKey, log)
 	if err != nil {
-		log.Error(err, "unable to decode body",
-			"Body", r.Body,
-		)
-	}
-	s, err := json.Marshal(j)
-	if err != nil {
+		log.Error(err, "Unable to connect to Token Service")
 		fmt.Fprint(w, err)
+		return
 	}
-	fmt.Fprintf(w, "%s", s)
+	resp, err := client.Token("XXX")
+	if err != nil {
+		log.Error(err, "Error retrieving token from Token Service")
+		fmt.Fprint(w, err)
+		return
+	}
+	j, err := json.Marshal(resp)
+	if err != nil {
+		log.Error(err, "Unable to marshal JSON response")
+		fmt.Fprint(w, err)
+		return
+	}
+	fmt.Fprint(w, j)
 }
 func main() {
 	http.HandleFunc("/", handler)
