@@ -28,7 +28,7 @@ RUN BUILD_TIME=$(date +%s) && \
     -o /bin/proxy \
     ./cmd/proxy
 
-RUN useradd --uid=10001 scratchuser
+# RUN useradd --uid=10001 scratchuser
 
 
 FROM scratch
@@ -37,8 +37,9 @@ LABEL org.opencontainers.image.source https://github.com/DazWilkin/prometheus-oa
 
 COPY --from=build /bin/proxy /
 COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
-USER scratchuser
+# USER scratchuser
 
 ENTRYPOINT ["/proxy"]
 CMD ["--port=7777"]
