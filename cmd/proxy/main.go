@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	stdlog "log"
 	"net/http"
 	"os"
@@ -56,6 +57,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"Path", r.URL.Path,
 		"Query", r.URL.RawQuery,
 	)
+	b, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Error(err, "Unable to read body")
+	}
+	log.Info("Body",
+		"Body", string(b),
+	)
+
 	// decoder := json.NewDecoder(r.Body)
 	// var j interface{}
 	// err := decoder.Decode(&j)
