@@ -4,8 +4,6 @@ ARG PROJECT="prometheus-oauth-proxy"
 ARG COMMIT
 ARG VERSION
 
-ARG TOKEN
-
 FROM golang:${GOLANG_VERSION} as build
 
 ARG PROJECT
@@ -13,19 +11,10 @@ ARG PROJECT
 ARG COMMIT
 ARG VERSION
 
-ARG TOKEN
-
 WORKDIR /${PROJECT}
 
 COPY go.mod go.mod
 COPY go.sum go.sum
-
-# Configure git to use the GitHub PAT
-RUN git config \
-    --global url."https://${TOKEN}@github.com".insteadOf "https://github.com"
-
-# Define GOPRIVATE for this environment to circumvent Go Module proxy
-ENV GOPRIVATE="github.com/brabantcourt"
 
 RUN go mod download
 
