@@ -3,11 +3,11 @@ module github.com/DazWilkin/prometheus-oauth-proxy
 go 1.17
 
 require (
-	github.com/brabantcourt/ackal-cli v0.0.0-20210922170333-5d129198cc5c
 	github.com/go-logr/logr v1.1.0
 	github.com/go-logr/stdr v1.1.0
 	github.com/prometheus/client_golang v1.11.0
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
+	google.golang.org/grpc v1.40.0
 )
 
 require (
@@ -26,6 +26,5 @@ require (
 	google.golang.org/api v0.57.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210921142501-181ce0d877f6 // indirect
-	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
