@@ -53,11 +53,8 @@ docker push ${GXR}/ackal-healthcheck-${TYPE}:6f29c437b6b7875edc13cfa48c5ea4dd77e
 
 ## Build
 
-> **NOTE** Uses `GOPRIVATE` repo temporarily needs GitHub `TOKEN`; will refactor
-
 ```bash
 docker build \
---build-arg=TOKEN=${TOKEN} \
 --build-arg=VERSION=$(uname --kernel-release) \
 --build-arg=COMMIT=$(git rev-parse HEAD) \
 --tag=ghcr.io/dazwilkin/prometheus-oauth-proxy:$(git rev-parse HEAD) \
@@ -145,4 +142,12 @@ https://${ENDPOINT}/metrics
 ```bash
 curl --request POST \
 http://localhost:9090/-/reload
+```
+
+## Debugging
+
+Body received:
+
+```JSON
+client_id=foo&client_secret=bar&grant_type=client_credentials&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform
 ```
