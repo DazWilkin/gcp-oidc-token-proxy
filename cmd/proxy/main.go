@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -19,8 +20,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 
-	"google.golang.org/api/idtoken"
 	"google.golang.org/grpc/credentials/oauth"
 )
 
@@ -89,10 +90,10 @@ func init() {
 	}
 	// DefaultTokenSource uses GOOGLE_APPLICATION_CREDENTIALS
 	var err error
-	// ts, err = google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
+	ts, err = google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
 	// aud := "https://ackal-healthcheck-server-2eynp5ydga-wl.a.run.app"
-	aud := "https://oauth2.googleapis.com/token"
-	ts, err = idtoken.NewTokenSource(context.Background(), aud)
+	// aud := "https://oauth2.googleapis.com/token"
+	// ts, err = idtoken.NewTokenSource(context.Background(), aud)
 	if err != nil {
 		log.Error(err, "Unable to get default token source")
 		os.Exit(1)
@@ -164,11 +165,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"token", tok,
 	)
 
-	access_token := tok.AccessToken
-	log.Info("Access Token",
-		"access_token", access_token,
-	)
-
 	// rqst := Request{
 	// 	GrantType: "authorization_code",
 	// 	Code:      access_token,
@@ -183,9 +179,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// }
 
 	resp := struct {
-		AccessToken string `json:"access_token"`
+		AccessToken  string  `json:"access_token"`
+		ExpiresIn    float64 `json:"expires_in"`
+		RefreshToken string  `json:"refresh_token"`
+		Scope        string  `json:"scope"`
+		TokenType    string  `json:"token_type"`
 	}{
-		AccessToken: access_token,
+		AccessToken: strings.TrimRight(tok.AccessToken, "."),
+		ExpiresIn:   time.Until(tok.Expiry).Seconds(),
+		TokenType:   tok.TokenType,
+		Scope:       "https://www.googleapis.com/auth/cloud-platform",
 	}
 
 	j, err := json.Marshal(resp)
