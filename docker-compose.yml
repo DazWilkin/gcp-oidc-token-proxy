@@ -24,7 +24,7 @@ services:
     image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:a88e720e21dc7f66d3d1435b113731e8be36daca
     container_name: gcp-oidc-token-proxy
     command:
-      - --target_url=https://some-server-xxxxxxxxxx-xx.a.run.app
+      - --target_url=https://some-service-xxxxxxxxxx-xx.a.run.app
       - --port=7777
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/client_secret.json
