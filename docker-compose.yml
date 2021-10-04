@@ -1,36 +1,6 @@
 version: "3"
 
 services:
-  cadvisor:
-    restart: always
-    image: gcr.io/cadvisor/cadvisor:v0.40.0
-    container_name: cadvisor
-    volumes:
-      - "/:/rootfs:ro"
-      - "/var/run:/var/run:rw"
-      - "/sys:/sys:ro"
-      # Default location
-      # - "/var/lib/docker/:/var/lib/docker:ro"
-      # Snap location
-      - "/var/snap/docker/current:/var/lib/docker:ro"
-    expose:
-      - "8080"
-    ports:
-      - 8085:8080
-
-  node-exporter:
-    restart: unless-stopped
-    image: prom/node-exporter:v1.2.2
-    container_name: node_exporter
-    command:
-      - '--path.rootfs=/host'
-    volumes:
-      - '/:/host:ro,rslave'
-    expose:
-    - "9100"
-    ports:
-    - 9100:9100
-
   prometheus:
     restart: always
     depends_on: []
@@ -40,6 +10,7 @@ services:
       - --config.file=/etc/prometheus/prometheus.yml
       # Permits `curl --request POST http://localhost:9090/-/reload`
       - --web.enable-lifecycle
+      - --log.level=debug
     volumes:
       - ${PWD}/prometheus.yml:/etc/prometheus/prometheus.yml
     expose:
@@ -51,16 +22,17 @@ services:
     restart: always
     depends_on:
     - prometheus
-    image: ghcr.io/dazwilkin/prometheus-oauth-proxy:6e0283419a90a0f4fe6f9d7b680d90c04ed87965
+    image: ghcr.io/dazwilkin/prometheus-oauth-proxy:109cb7aa6c964cfa08d3de9687509808cf29f2f2
     container_name: prom-oauth-proxy
-    command: []
+    command:
+      - target_url=https://ackal-healthcheck-server-2eynp5ydga-wl.a.run.app
+      - port=7777
     environment:
       API_KEY: ${API_KEY}
-      GOOGLE_APPLICATION_CREDENTIALS: /secrets/cloudrun.json
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/client_secret.json
     volumes:
-    - ${PWD}/cloudrun.json:/secrets/cloudrun.json
+    - ${PWD}/client_secret.json:/secrets/client_secret.json
     expose:
     - "7777"
     ports:
     - 7777:7777
-
