@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -18,9 +19,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-
+	"google.golang.org/api/idtoken"
 	"google.golang.org/grpc/credentials/oauth"
 )
 
@@ -71,8 +70,6 @@ var (
 )
 var (
 	apiKey string
-	creds  oauth.TokenSource
-	ts     oauth2.TokenSource
 )
 
 func init() {
@@ -87,18 +84,6 @@ func init() {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
 		log.Error(nil, "Unable to find GOOGLE_APPLICATON_CREDENTIALS in the environment")
 	}
-	// DefaultTokenSource uses GOOGLE_APPLICATION_CREDENTIALS
-	var err error
-	ts, err = google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
-	// aud := "https://ackal-healthcheck-server-2eynp5ydga-wl.a.run.app"
-	// aud := "https://oauth2.googleapis.com/token"
-	// ts, err = idtoken.NewTokenSource(context.Background(), aud)
-	if err != nil {
-		log.Error(err, "Unable to get default token source")
-		os.Exit(1)
-	}
-
-	creds = oauth.TokenSource{ts}
 }
 
 // Client is a type that is not yet used
@@ -153,11 +138,26 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"Body", string(b),
 	)
 
+	// Returns Access Tokens ya29...
+	// ts, err := google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
+
+	// Returns ID Token
+	// But need to create a dummy response (see handler)
+	aud := "https://ackal-healthcheck-server-2eynp5ydga-wl.a.run.app"
+	// aud := "https://oauth2.googleapis.com/token"
+	ts, err := idtoken.NewTokenSource(context.Background(), aud)
+	if err != nil {
+		log.Error(err, "Unable to get default token source")
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	// tok, err := creds.Token()
 	tok, err := ts.Token()
 	if err != nil {
 		log.Error(err, "Unable to get token from token source")
-		os.Exit(1)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
 	log.Info("Token",
@@ -177,20 +177,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	// resp := struct {
-	// 	AccessToken  string  `json:"access_token"`
-	// 	ExpiresIn    float64 `json:"expires_in"`
-	// 	RefreshToken string  `json:"refresh_token"`
-	// 	Scope        string  `json:"scope"`
-	// 	TokenType    string  `json:"token_type"`
-	// }{
-	// 	AccessToken: strings.TrimRight(tok.AccessToken, "."),
-	// 	ExpiresIn:   time.Until(tok.Expiry).Seconds(),
-	// 	TokenType:   tok.TokenType,
-	// 	Scope:       "https://www.googleapis.com/auth/cloud-platform",
-	// }
+	resp := struct {
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int    `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+		Scope        string `json:"scope"`
+		TokenType    string `json:"token_type"`
+	}{
+		AccessToken:  strings.TrimRight(tok.AccessToken, "."),
+		ExpiresIn:    int(time.Until(tok.Expiry).Seconds()), // By this point may be <3600
+		RefreshToken: "",                                    // No refresh token with Service Account
+		TokenType:    "Bearer",                              // tok.TokenType is "" with idtoken,
+		Scope:        "https://www.googleapis.com/auth/cloud-platform",
+	}
 
-	j, err := json.Marshal(tok)
+	j, err := json.Marshal(resp)
 	if err != nil {
 		log.Error(err, "Unable to marshal JSON response")
 		fmt.Fprint(w, err)
