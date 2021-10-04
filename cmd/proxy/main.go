@@ -63,13 +63,21 @@ func init() {
 		os.Exit(1)
 	}
 
+	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
+		log.Error(nil, "Unable to find GOOGLE_APPLICATON_CREDENTIALS in the environment")
+	}
 	tokenSrc, err := google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
 	if err != nil {
-		log.Error(err, "Unable to find GOOGLE_APPLICATON_CREDENTIALS in the environment")
+		log.Error(err, "Unable to get default token source")
 		os.Exit(1)
 	}
 
 	creds = oauth.TokenSource{tokenSrc}
+}
+
+type Client struct {
+	client http.Client
+	creds  oauth.TokenSource
 }
 
 type Request struct {
@@ -113,6 +121,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		log.Error(err, "Unable to get token from token source")
 		os.Exit(1)
 	}
+
+	log.Info("Token",
+		"token", tok,
+	)
 
 	if tok.Extra("id_token") == nil {
 		log.Error(nil, "Unable to determine ID token")

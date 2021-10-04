@@ -1,0 +1,66 @@
+version: "3"
+
+services:
+  cadvisor:
+    restart: always
+    image: gcr.io/cadvisor/cadvisor:v0.40.0
+    container_name: cadvisor
+    volumes:
+      - "/:/rootfs:ro"
+      - "/var/run:/var/run:rw"
+      - "/sys:/sys:ro"
+      # Default location
+      # - "/var/lib/docker/:/var/lib/docker:ro"
+      # Snap location
+      - "/var/snap/docker/current:/var/lib/docker:ro"
+    expose:
+      - "8080"
+    ports:
+      - 8085:8080
+
+  node-exporter:
+    restart: unless-stopped
+    image: prom/node-exporter:v1.2.2
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+    expose:
+    - "9100"
+    ports:
+    - 9100:9100
+
+  prometheus:
+    restart: always
+    depends_on: []
+    image: prom/prometheus:v2.30.2
+    container_name: prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      # Permits `curl --request POST http://localhost:9090/-/reload`
+      - --web.enable-lifecycle
+    volumes:
+      - ${PWD}/prometheus.yml:/etc/prometheus/prometheus.yml
+    expose:
+      - "9090"
+    ports:
+      - 9090:9090
+
+  prom-oauth-proxy:
+    restart: always
+    depends_on:
+    - prometheus
+    image: ghcr.io/dazwilkin/prometheus-oauth-proxy:6e0283419a90a0f4fe6f9d7b680d90c04ed87965
+    container_name: prom-oauth-proxy
+    command: []
+    environment:
+      API_KEY: ${API_KEY}
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/cloudrun.json
+    volumes:
+    - ${PWD}/cloudrun.json:/secrets/cloudrun.json
+    expose:
+    - "7777"
+    ports:
+    - 7777:7777
+
