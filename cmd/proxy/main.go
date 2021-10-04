@@ -142,7 +142,7 @@ func main() {
 	flag.Parse()
 
 	if *target_url == "" {
-		log.Error(nil, "Flag `target_url` is required as it is used as `aud` value in identity token")
+		log.Error(nil, "Flag `target_url` is required as it is used as the audience value when constructing a TokenSource")
 		os.Exit(1)
 	}
 
@@ -159,11 +159,15 @@ func main() {
 	http.HandleFunc("/", handler)
 	http.Handle("/metrics", promhttp.Handler())
 
-	log.Info("Starting HTTP server",
+	// Avoid serving /favico.ico
+	// Doing so triggers the root handler and this results in tokens being minted
+	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {})
+
+	log.Info("Starting token server",
 		"port", *port,
 	)
 	log.Error(http.ListenAndServe(
 		fmt.Sprintf(":%d", *port),
 		nil,
-	), "failed to start server")
+	), "failed to start token server")
 }
