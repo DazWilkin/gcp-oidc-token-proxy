@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -132,10 +131,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		Scope        string `json:"scope"`
 		TokenType    string `json:"token_type"`
 	}{
-		AccessToken:  strings.TrimRight(tok.AccessToken, "."),
-		ExpiresIn:    int(time.Until(tok.Expiry).Seconds()), // By this point may be <3600
-		RefreshToken: "",                                    // No refresh token with Service Account
-		TokenType:    "Bearer",                              // tok.TokenType is "" with idtoken,
+		AccessToken:  tok.AccessToken,
+		ExpiresIn:    int(time.Until(tok.Expiry).Seconds()),
+		RefreshToken: tok.AccessToken,
+		TokenType:    "Bearer",
 		Scope:        "https://www.googleapis.com/auth/cloud-platform",
 	}
 
