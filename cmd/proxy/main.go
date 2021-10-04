@@ -34,7 +34,8 @@ var (
 )
 
 var (
-	port = flag.Uint("port", 7777, "The endpoint of the proxy's HTTP server")
+	target_url = flag.String("target_url", "", "The URL of the target service")
+	port       = flag.Uint("port", 7777, "The endpoint of the proxy's HTTP server")
 )
 var (
 	log logr.Logger
@@ -74,16 +75,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"Body", string(b),
 	)
 
-	// Cloud Run requires ID Tokens
-
-	// oauth2.google returns Access Tokens ya29...
-	// ts, err := google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
-
-	// idtoken returns ID Tokens
-	aud := "https://ackal-healthcheck-server-2eynp5ydga-wl.a.run.app"
-	// aud := "https://oauth2.googleapis.com/token"
-
-	ts, err := idtoken.NewTokenSource(context.Background(), aud)
+	ts, err := idtoken.NewTokenSource(context.Background(), *target_url)
 	if err != nil {
 		log.Error(err, "Unable to get default token source")
 		w.WriteHeader(http.StatusInternalServerError)
