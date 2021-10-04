@@ -164,3 +164,56 @@ Body received:
 ```JSON
 client_id=foo&client_secret=bar&grant_type=client_credentials&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform
 ```
+
+### Example log lines
+
+```console
+"caller"={"file":"main.go","line":142} "level"=0 "msg"="Request" "Host"="" "Path"="/" "Query"=""
+"caller"={"file":"main.go","line":152} "level"=0 "msg"="Body" "Body"="grant_type=client_credentials&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform"
+"caller"={"file":"main.go","line":163} "level"=0 "msg"="Token" "token"={"access_token":"ey...","token_type":"","refresh_token":"","expiry":{}}
+```
+
+### Shipping directly to the proxy:
+
+```bash
+CLIENT_ID="foo"
+CLIENT_SECRET="bar"
+GRANT_TYPE="client_credentials"
+
+curl --data "client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&grant_type=${GRANT_TYPE}&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform" localhost:7777/
+```
+
+### Getting directly from proxy and calling Cloud Run:
+
+```bash
+TOKEN=$(\
+  curl \
+  --silent \
+  --data "client_id=foo&client_secret=bar&grant_type=client_credentials&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform" \
+  localhost:7777/ \
+  | jq -r .access_token)
+
+curl \
+--header "Authorization: Bearer ${TOKEN}" \
+https://${ENDPOINT}/metrics
+```
+
+> **NOTE** The request body is ignored by the sidecar so `foo`, `bar` etc need not be included, just some body
+
+> **NOTE** `localhost:7777` corresponds to `prom-oauth-proxy:7777` from the host
+
+## Program Notes
+
+Cloud Run requires ID Tokens
+
+[`oauth2/google`](https://pkg.go.dev/golang.org/x/oauth2/google) returns Access Tokens ya29...
+
+```golang
+ts, err := google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
+```
+
+[`idtoken`](https://pkg.go.dev/google.golang.org/api/idtoken) returns ID Tokens
+	
+```golang
+ts, err := idtoken.NewTokenSource(context.Background(), *target_url)
+```
