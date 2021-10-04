@@ -14,6 +14,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
+	"golang.org/x/oauth2"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -49,6 +50,16 @@ func init() {
 	}
 }
 
+// Refactor this
+var (
+	ts  oauth2.TokenSource
+	tok *oauth2.Token
+)
+
+func getToken() (err error) {
+	tok, err = ts.Token()
+	return
+}
 func handler(w http.ResponseWriter, r *http.Request) {
 	log = log.WithName("handler")
 
@@ -66,18 +77,24 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		"Body", string(b),
 	)
 
-	ts, err := idtoken.NewTokenSource(context.Background(), *target_url)
-	if err != nil {
-		log.Error(err, "Unable to get default token source")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	// Check whether token has already been initialized
+	if tok == nil {
+		log.Info("Token being initialized")
+		if err := getToken(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
-	tok, err := ts.Token()
-	if err != nil {
-		log.Error(err, "Unable to get token from token source")
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+	// Check whether token has expired
+	// If just initialized, probably redundant to check its expiry
+	if int(time.Until(tok.Expiry).Seconds()) < 5 {
+		log.Info("Refreshing Token as nearing expiry or expired")
+		if err := getToken(); err != nil {
+			log.Error(err, "Unable to get token from token source")
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	// Debugging: log the token
@@ -130,6 +147,14 @@ func main() {
 	}
 
 	log = log.WithValues("aud", *target_url)
+
+	// Initialize TokenSource using Application Default Credentials
+	var err error
+	ts, err = idtoken.NewTokenSource(context.Background(), *target_url)
+	if err != nil {
+		log.Error(err, "Unable to get default token source")
+		os.Exit(1)
+	}
 
 	http.HandleFunc("/", handler)
 	http.Handle("/metrics", promhttp.Handler())
