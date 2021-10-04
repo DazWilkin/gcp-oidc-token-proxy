@@ -27,9 +27,9 @@ services:
       - --target_url=https://some-service-xxxxxxxxxx-xx.a.run.app
       - --port=7777
     environment:
-      GOOGLE_APPLICATION_CREDENTIALS: /secrets/client_secret.json
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/key.json
     volumes:
-    - ${PWD}/client_secret.json:/secrets/client_secret.json
+    - ${PWD}/key.json:/secrets/key.json
     expose:
     - "7777"
     ports:
