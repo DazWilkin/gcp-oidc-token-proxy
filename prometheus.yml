@@ -9,11 +9,11 @@ scrape_configs:
       - targets:
           - "localhost:9090"
 
-  # Prometheus OAuth Token Proxy
-  # - job_name: "prom-oauth-proxy"
-  #   static_configs:
-  #   - targets:
-  #     - "prom-oauth-proxy"
+  Prometheus OAuth Token Proxy
+  - job_name: "prometheus-oauth-proxy"
+    static_configs:
+    - targets:
+      - "prom-oauth-proxy"
 
   # Cloud Run Healthcheck service
   - job_name: "healthcheck-server"
