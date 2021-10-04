@@ -194,7 +194,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, err)
 		return
 	}
-	fmt.Fprint(w, j)
+	fmt.Fprint(w, string(j))
 }
 func main() {
 	http.HandleFunc("/", handler)
