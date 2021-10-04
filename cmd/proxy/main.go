@@ -20,32 +20,6 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
-const (
-	method string = "https://securetoken.googleapis.com/v1/token"
-)
-const (
-	scopeCloudPlatform string = "https://www.googleapis.com/auth/cloud-platform"
-)
-
-// GrantType represents the implicit GrantType enum in Google's Token Service Request type
-type GrantType int
-
-func (g GrantType) String() string {
-	switch g {
-	case AuthorizationCode:
-		return "authorization_code"
-	case RefreshToken:
-		return "refresh_token"
-	default:
-		panic(fmt.Sprintf("Unknown GrantType (%d)", int(g)))
-	}
-}
-
-const (
-	AuthorizationCode = iota
-	RefreshToken      = iota
-)
-
 var (
 	// BuildTime is the time that this binary was built represented as a UNIX epoch
 	BuildTime string
@@ -60,7 +34,7 @@ var (
 )
 
 var (
-	port = flag.Uint("port", 7777, "The endpoint of the HTTP server")
+	port = flag.Uint("port", 7777, "The endpoint of the proxy's HTTP server")
 )
 var (
 	log logr.Logger
@@ -84,27 +58,31 @@ func init() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	log.Info("Request",
-		"Host", r.URL.Host,
-		"Path", r.URL.Path,
-		"Query", r.URL.RawQuery,
-	)
+	log := log.WithName("handler")
+
+	// Debugging: read the request body
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Error(err, "Unable to read body")
 	}
 
+	// Debugging: log the request's details
 	log.Info("Body",
+		"Host", r.URL.Host,
+		"Path", r.URL.Path,
+		"Query", r.URL.RawQuery,
 		"Body", string(b),
 	)
 
-	// Returns Access Tokens ya29...
+	// Cloud Run requires ID Tokens
+
+	// oauth2.google returns Access Tokens ya29...
 	// ts, err := google.DefaultTokenSource(context.Background(), scopeCloudPlatform)
 
-	// Returns ID Token
-	// But need to create a dummy response (see handler)
+	// idtoken returns ID Tokens
 	aud := "https://ackal-healthcheck-server-2eynp5ydga-wl.a.run.app"
 	// aud := "https://oauth2.googleapis.com/token"
+
 	ts, err := idtoken.NewTokenSource(context.Background(), aud)
 	if err != nil {
 		log.Error(err, "Unable to get default token source")
@@ -112,7 +90,6 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// tok, err := creds.Token()
 	tok, err := ts.Token()
 	if err != nil {
 		log.Error(err, "Unable to get token from token source")
@@ -120,10 +97,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Debugging: log the token
+	// TODO(dazwilkin) Don't do this in production
 	log.Info("Token",
 		"token", tok,
 	)
 
+	// The response isn't quite oauth2.Token
+	// https://pkg.go.dev/golang.org/x/oauth2#Token
+	// Uses expires_in instead of expiry !??
+	// By the time of its calculation, it's likely <3600
+	// Cloud Run accepts e.g. --header="Authorization: Bearer $(gcloud auth print-identity-token)"
 	resp := struct {
 		AccessToken  string `json:"access_token"`
 		ExpiresIn    int    `json:"expires_in"`
@@ -134,10 +118,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		AccessToken:  tok.AccessToken,
 		ExpiresIn:    int(time.Until(tok.Expiry).Seconds()),
 		RefreshToken: tok.AccessToken,
-		TokenType:    "Bearer",
+		TokenType:    "bearer",
 		Scope:        "https://www.googleapis.com/auth/cloud-platform",
 	}
 
+	// Debugging: log the response
 	log.Info("Response",
 		"response", resp,
 	)
@@ -145,9 +130,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	j, err := json.Marshal(resp)
 	if err != nil {
 		log.Error(err, "Unable to marshal JSON response")
-		fmt.Fprint(w, err)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+
+	// Done
+	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, string(j))
 }
 func main() {
