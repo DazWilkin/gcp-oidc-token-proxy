@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"runtime"
-	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -178,20 +177,20 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// 	return
 	// }
 
-	resp := struct {
-		AccessToken  string  `json:"access_token"`
-		ExpiresIn    float64 `json:"expires_in"`
-		RefreshToken string  `json:"refresh_token"`
-		Scope        string  `json:"scope"`
-		TokenType    string  `json:"token_type"`
-	}{
-		AccessToken: strings.TrimRight(tok.AccessToken, "."),
-		ExpiresIn:   time.Until(tok.Expiry).Seconds(),
-		TokenType:   tok.TokenType,
-		Scope:       "https://www.googleapis.com/auth/cloud-platform",
-	}
+	// resp := struct {
+	// 	AccessToken  string  `json:"access_token"`
+	// 	ExpiresIn    float64 `json:"expires_in"`
+	// 	RefreshToken string  `json:"refresh_token"`
+	// 	Scope        string  `json:"scope"`
+	// 	TokenType    string  `json:"token_type"`
+	// }{
+	// 	AccessToken: strings.TrimRight(tok.AccessToken, "."),
+	// 	ExpiresIn:   time.Until(tok.Expiry).Seconds(),
+	// 	TokenType:   tok.TokenType,
+	// 	Scope:       "https://www.googleapis.com/auth/cloud-platform",
+	// }
 
-	j, err := json.Marshal(resp)
+	j, err := json.Marshal(tok)
 	if err != nil {
 		log.Error(err, "Unable to marshal JSON response")
 		fmt.Fprint(w, err)
