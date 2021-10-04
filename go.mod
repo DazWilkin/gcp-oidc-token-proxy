@@ -6,9 +6,7 @@ require (
 	github.com/go-logr/logr v1.1.0
 	github.com/go-logr/stdr v1.1.0
 	github.com/prometheus/client_golang v1.11.0
-	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
 	google.golang.org/api v0.57.0
-	google.golang.org/grpc v1.40.0
 )
 
 require (
@@ -24,9 +22,11 @@ require (
 	github.com/prometheus/procfs v0.6.0 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/net v0.0.0-20210917221730-978cfadd31cf // indirect
+	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f // indirect
 	golang.org/x/sys v0.0.0-20210921065528-437939a70204 // indirect
 	golang.org/x/text v0.3.6 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20210921142501-181ce0d877f6 // indirect
+	google.golang.org/grpc v1.40.0 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 )
