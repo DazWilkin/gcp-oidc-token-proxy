@@ -1,6 +1,6 @@
 global:
-  scrape_interval: 1m
-  evaluation_interval: 1m
+  # scrape_interval: 1m
+  # evaluation_interval: 1m
 
 scrape_configs:
   # Self
@@ -9,11 +9,11 @@ scrape_configs:
       - targets:
           - "localhost:9090"
 
-  Prometheus OAuth Token Proxy
+  # Prometheus OAuth Token Proxy
   - job_name: "prometheus-oauth-proxy"
     static_configs:
     - targets:
-      - "prom-oauth-proxy"
+      - "prom-oauth-proxy:7777"
 
   # Cloud Run Healthcheck service
   - job_name: "healthcheck-server"
@@ -27,15 +27,3 @@ scrape_configs:
     static_configs:
       - targets:
           - "ackal-healthcheck-server-2eynp5ydga-wl.a.run.app:443"
-
-  # cAdvisor exports metrics for *all* containers running on this host
-  - job_name: cadvisor
-    static_configs:
-      - targets:
-          - "cadvisor:8080"
-
-  # Node Exporter
-  - job_name: node-exporter
-    static_configs:
-      - targets:
-          - "node-exporter:9100"
