@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	stdlog "log"
 	"net/http"
-	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -20,7 +19,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"google.golang.org/api/idtoken"
-	"google.golang.org/grpc/credentials/oauth"
 )
 
 const (
@@ -86,43 +84,6 @@ func init() {
 	}
 }
 
-// Client is a type that is not yet used
-type Client struct {
-	client http.Client
-	creds  oauth.TokenSource
-}
-
-// Request is a type that corresponds to Google's Token Service Request
-// https://developers.google.com/identity/toolkit/reference/securetoken/rest/v1/token
-type Request struct {
-	GrantType    string `json:"grant_type" description:"The type of token being sent"`
-	Code         string `json:"code" description:"Identity token to exchange for an access token"`
-	RefreshToken string `json:"refresh_token" description:"Refresh token to exchange for an access token"`
-}
-
-// Response is a type that corresponds to Google's Token Service Response
-// Values is a method that converts a TokenRequest into URL-encoded values
-type Response struct {
-	AccessToken  string `json:"access_token"`
-	ExpiresIn    string `json:"expires_in"`
-	TokenType    string `json:"token_type"`
-	RefreshToken string `json:"refresh_token"`
-}
-
-func (t *Request) Values() url.Values {
-	data := url.Values{}
-	data.Set("grant_type", t.GrantType)
-
-	switch t.GrantType {
-	case "authorization_code":
-		data.Set("code", t.Code)
-	case "refresh_token":
-		data.Set("refresh_token", t.RefreshToken)
-	}
-
-	return data
-}
-
 func handler(w http.ResponseWriter, r *http.Request) {
 	log.Info("Request",
 		"Host", r.URL.Host,
@@ -148,7 +109,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	ts, err := idtoken.NewTokenSource(context.Background(), aud)
 	if err != nil {
 		log.Error(err, "Unable to get default token source")
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -156,26 +117,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	tok, err := ts.Token()
 	if err != nil {
 		log.Error(err, "Unable to get token from token source")
-		w.WriteHeader(http.StatusBadRequest)
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	log.Info("Token",
 		"token", tok,
 	)
-
-	// rqst := Request{
-	// 	GrantType: "authorization_code",
-	// 	Code:      access_token,
-	// }
-
-	// client := *http.DefaultClient
-
-	// resp, err := client.PostForm(fmt.Sprintf("%s?key=%s", method, apiKey), rqst.Values())
-	// if err != nil {
-	// 	log.Error(err, "Unable to POST against Google Secure Token endpoint")
-	// 	return
-	// }
 
 	resp := struct {
 		AccessToken  string `json:"access_token"`
@@ -190,6 +138,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		TokenType:    "Bearer",                              // tok.TokenType is "" with idtoken,
 		Scope:        "https://www.googleapis.com/auth/cloud-platform",
 	}
+
+	log.Info("Response",
+		"response", resp,
+	)
 
 	j, err := json.Marshal(resp)
 	if err != nil {
