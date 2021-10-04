@@ -25,7 +25,7 @@ gcloud artifacts repositories create ${REPOSITORY} \
 --location=${REGION} \
 --project=${PROJECT}
 
-GHCR="ghcr.io/brabantcourt"
+GHCR="ghcr.io/brabantcourt" # brabantcourt for ackal-healthcheck-server
 GXR="${REGION}-docker.pkg.dev/${PROJECT}/${REPOSITORY}"
 
 gcloud auth print-access-token \
@@ -54,12 +54,21 @@ docker push ${GXR}/ackal-healthcheck-${TYPE}:6f29c437b6b7875edc13cfa48c5ea4dd77e
 ## Build
 
 ```bash
+GHCR="ghcr.io/dazwilkin" # dazwilkin for prometheus-oauth-proxy
+IMAGE="prometheus-oauth-proxy"
+
 docker build \
 --build-arg=VERSION=$(uname --kernel-release) \
 --build-arg=COMMIT=$(git rev-parse HEAD) \
---tag=ghcr.io/dazwilkin/prometheus-oauth-proxy:$(git rev-parse HEAD) \
+--tag=${GHCR}/${IMAGE}:$(git rev-parse HEAD) \
 --file=./Dockerfile \
 .
+
+# Update image in Docker Compose
+sed \
+--in-place \
+--expression "s|${GHCR}/${IMAGE}:[0-9a-z]\{40\}|${GHCR}/${IMAGE}:$(git rev-parse HEAD)|g" \
+./docker-compose.yml
 ```
 
 ### Healthcheck Server
@@ -86,15 +95,26 @@ ENDPOINT=$(\
   --format="value(status.address.url)") && \
 ENDPOINT=${ENDPOINT#https://} && \
 echo ${ENDPOINT}
+```
 
+`${ENDPOINT}` is the value for the service in `prometheus.yml`
 
+```bash
+sed --in-place \
+--expression "s|-\s"[a-z0-9-]*-[a-z0-9]\{10\}-[a-z]\{2\}.a.run.app:443"|"-\s"${ENDPOINT}:443"|g" \
+./prometheus.yml
+```
+
+### Service Account
+
+```bash
 ACCOUNT="cloudrun"
 EMAIL="${ACCOUNT}@${PROJECT}.iam.gserviceaccount.com"
 
 gcloud iam service-accounts create ${ACCOUNT} \
 --project=${PROJECT}
 
-gcloud iam service-accounts keys create ${PWD}/${ACCOUNT}.json \
+gcloud iam service-accounts keys create ${PWD}/client_json.json \
 --iam-account=${EMAIL} \
 --project=${PROJECT}
 
@@ -103,13 +123,6 @@ gcloud projects add-iam-policy-binding ${PROJECT} \
 --role=roles/run.invoker
 ```
 
-`${ENDPOINT}` is the value for the service in `prometheus.yml`
-
-```bash
-sed --in-place \
---expression "s|-\s"[a-z0-9\-]*.a.run.app"|-\s"${ENDPOINT}"|g" \
-./prometheus.yml
-```
 
 ## Test
 
