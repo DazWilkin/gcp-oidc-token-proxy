@@ -8,9 +8,8 @@ services:
     container_name: prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
-      # Permits `curl --request POST http://localhost:9090/-/reload`
       - --web.enable-lifecycle
-      - --log.level=debug
+      # - --log.level=debug
     volumes:
       - ${PWD}/prometheus.yml:/etc/prometheus/prometheus.yml
     expose:
@@ -18,17 +17,16 @@ services:
     ports:
       - 9090:9090
 
-  prom-oauth-proxy:
+  gcp-oidc-token-proxy:
     restart: always
     depends_on:
     - prometheus
-    image: ghcr.io/dazwilkin/prometheus-oauth-proxy:109cb7aa6c964cfa08d3de9687509808cf29f2f2
-    container_name: prom-oauth-proxy
+    image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:a88e720e21dc7f66d3d1435b113731e8be36daca
+    container_name: gcp-oidc-token-proxy
     command:
-      - target_url=https://ackal-healthcheck-server-2eynp5ydga-wl.a.run.app
-      - port=7777
+      - --target_url=https://some-server-xxxxxxxxxx-xx.a.run.app
+      - --port=7777
     environment:
-      API_KEY: ${API_KEY}
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/client_secret.json
     volumes:
     - ${PWD}/client_secret.json:/secrets/client_secret.json
