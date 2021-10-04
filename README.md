@@ -1,13 +1,129 @@
-# Prometheus OAuth2 Proxy for GCP
+# OIDC Token Proxy for [GCP](https://cloud.google.com)
+
+[![build-container](https://github.com/DazWilkin/gcp-oidc-token-proxy/actions/workflows/build-container.yml/badge.svg)](https://github.com/DazWilkin/gcp-oidc-token-proxy/actions/workflows/build-container.yml)
+
+A way to configure Prometheus to scrape services deployed to [Google Cloud Platform (GCP)](https://cloud.google.com) that require authentication (using Google-minted OpenID Connect ID Tokens)
+
+Prometheus supports only TLS and [OAuth2](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#oauth2) for authenticating scrape targets. Unfortunately, the [OAuth2](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#oauth2) configuration is insufficiently flexible to permit using a Google Service Account as an identity and to mind ID Tokens with the Service Account. This 'sidecar' (thanks Levi Harrison for the suggestion in [this](https://stackoverflow.com/a/69419467/609290) comment thread) performs as a proxy, configured to run as a Google Service Account, that mints ID Tokens that can be used by Prometheus' OAuth2 config.
+
++ Create [Service Account](#service-account)
++ [Run](#run) this proxy
++ Configure [Prometheus](#prometheus) to point at it
++ Scrape e.g. Cloud Run services
+
+### Service Account
+
+```bash
+ACCOUNT="gcp-oidc-token-proxy"
+EMAIL="${ACCOUNT}@${PROJECT}.iam.gserviceaccount.com"
+
+gcloud iam service-accounts create ${ACCOUNT} \
+--project=${PROJECT}
+
+gcloud iam service-accounts keys create ${PWD}/key.json \
+--iam-account=${EMAIL} \
+--project=${PROJECT}
+
+gcloud projects add-iam-policy-binding ${PROJECT} \
+--member=serviceAccount:${EMAIL} \
+--role=roles/run.invoker
+```
+
+## Run
+
+### Kubernetes
+
+TBD
+
+### Docker Compose
+
+```YAML
+gcp-oidc-token-proxy:
+  restart: always
+  depends_on:
+  - prometheus
+  image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:a88e720e21dc7f66d3d1435b113731e8be36daca
+  container_name: gcp-oidc-token-proxy
+  command:
+    - --target_url=https://some-service-xxxxxxxxxx-xx.a.run.app
+    - --port=7777
+  environment:
+    GOOGLE_APPLICATION_CREDENTIALS: /secrets/key.json
+  volumes:
+  - ${PWD}/key.json:/secrets/key.json
+  expose:
+  - "7777"
+  ports:
+  - 7777:7777
+```
+
+### Docker
+
+```bash
+ENDPOINT="[[e.g. Cloud Run service URL]]"
+PORT="7777"
+
+docker run \
+--interactive --tty --rm \
+--publish=7777:7777 \
+--volume=${PWD}/key.json:/secrets/key.json \
+--env=GOOGLE_APPLICATION_CREDENTIALS=/secret/key.json \
+ghcr.io/dazwilkin/gcp-oidc-token-proxy:a88e720e21dc7f66d3d1435b113731e8be36daca \
+--target_url=${ENDPOINT} \
+--port=${PORT}
+```
+
+## Prometheus
+
+The Prometheus configuration file (`prometheus.yml`) needs to include an `[OAuth]` section that points to the proxy:
+
+```YAML
+# E.g. Cloud Run service
+- job_name: "cloudrun-service"
+  scheme: https
+  oauth2:
+    client_id: "anything"
+    client_secret: "anything"
+    scopes:
+    - "https://www.googleapis.com/auth/cloud-platform"
+    token_url: "http://gcp-oauth-token-proxy:7777/"
+  static_configs:
+    - targets:
+        - "some-service-xxxxxxxxxx-yy.a.run.app:443"
+```
+
+> **NOTE** The e.g. Cloud Run URL needs to be without the protocol (defined by `scheme`) and the default HTTP port (`443`) is optional in this case.
+
+You can use `gcloud` to grab a Cloud Run service's URL:
+
+```bash
+ENDPOINT=$(\
+  gcloud run services describe ${NAME} \
+  --project=${PROJECT} \
+  --platform=managed \
+  --region=${REGION} \
+  --format="value(status.address.url)") && \
+ENDPOINT=${ENDPOINT#https://} && \
+echo ${ENDPOINT}
+```
+
+The proxy exports metrics too and these can be included:
+
+```
+# GCP OAuth Token Proxy
+- job_name: "gcp-oauth-token-proxy"
+  static_configs:
+  - targets:
+    - "gcp-oauth-token-proxy:7777"
+```
 
 ## Setup
 
 ```bash
 BILLING=$(gcloud alpha billing accounts list --format="value(name)")
-PROJECT="dazwilkin-$(date +%y%m%d)-oauthproxy"
-REGION="us-west2"
-REPOSITORY="repo"
-API_KEY="..."
+PROJECT="[[YOUR-PROJECT-ID]]"
+REGION="[[YOUR-REGION]]"
+REPOSITORY="[[YOUR-REPOSITORY]]"
 
 GHCR_TOKEN="..."
 
@@ -54,8 +170,8 @@ docker push ${GXR}/ackal-healthcheck-${TYPE}:6f29c437b6b7875edc13cfa48c5ea4dd77e
 ## Build
 
 ```bash
-GHCR="ghcr.io/dazwilkin" # dazwilkin for prometheus-oauth-proxy
-IMAGE="prometheus-oauth-proxy"
+GHCR="ghcr.io/dazwilkin"
+IMAGE="gcp-oidc-token-proxy"
 
 docker build \
 --build-arg=VERSION=$(uname --kernel-release) \
@@ -105,23 +221,6 @@ sed --in-place \
 ./prometheus.yml
 ```
 
-### Service Account
-
-```bash
-ACCOUNT="cloudrun"
-EMAIL="${ACCOUNT}@${PROJECT}.iam.gserviceaccount.com"
-
-gcloud iam service-accounts create ${ACCOUNT} \
---project=${PROJECT}
-
-gcloud iam service-accounts keys create ${PWD}/client_json.json \
---iam-account=${EMAIL} \
---project=${PROJECT}
-
-gcloud projects add-iam-policy-binding ${PROJECT} \
---member=serviceAccount:${EMAIL} \
---role=roles/run.invoker
-```
 
 
 ## Test
