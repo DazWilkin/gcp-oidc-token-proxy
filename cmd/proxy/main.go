@@ -40,18 +40,9 @@ var (
 var (
 	log logr.Logger
 )
-var (
-	apiKey string
-)
 
 func init() {
 	log = stdr.NewWithOptions(stdlog.New(os.Stderr, "", stdlog.LstdFlags), stdr.Options{LogCaller: stdr.All})
-
-	apiKey = os.Getenv("API_KEY")
-	if apiKey == "" {
-		log.Error(nil, "Unable to find API_KEY in the environment")
-		os.Exit(1)
-	}
 
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
 		log.Error(nil, "Unable to find GOOGLE_APPLICATON_CREDENTIALS in the environment")
@@ -59,7 +50,7 @@ func init() {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	log := log.WithName("handler")
+	log = log.WithName("handler")
 
 	// Debugging: read the request body
 	b, err := ioutil.ReadAll(r.Body)
@@ -131,9 +122,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(j))
 }
 func main() {
+	flag.Parse()
+
+	if *target_url == "" {
+		log.Error(nil, "Flag `target_url` is required as it is used as `aud` value in identity token")
+		os.Exit(1)
+	}
+
+	log = log.WithValues("aud", *target_url)
+
 	http.HandleFunc("/", handler)
 	http.Handle("/metrics", promhttp.Handler())
 
+	log.Info("Starting HTTP server",
+		"port", *port,
+	)
 	log.Error(http.ListenAndServe(
 		fmt.Sprintf(":%d", *port),
 		nil,
