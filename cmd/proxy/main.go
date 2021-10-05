@@ -46,7 +46,7 @@ func init() {
 	log = stdr.NewWithOptions(stdlog.New(os.Stderr, "", stdlog.LstdFlags), stdr.Options{LogCaller: stdr.All})
 
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
-		log.Error(nil, "Unable to find GOOGLE_APPLICATON_CREDENTIALS in the environment")
+		log.Error(nil, "Unable to find GOOGLE_APPLICATION_CREDENTIALS in the environment")
 	}
 }
 
