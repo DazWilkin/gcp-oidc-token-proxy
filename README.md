@@ -33,7 +33,7 @@ ENDPOINT=${ENDPOINT#https://} && \
 echo ${ENDPOINT}
 ```
 
-> **NOTE** The protocol (scheme) (usually `https`) and the `//` are removed from the `ENDPOINT` value as this is unexpected by Prometheus targets.
+> **NOTE** The protocol (scheme) (usually `https`) and the `//` are removed from the `ENDPOINT` value as this is not expected by Prometheus targets.
 
 ## Service Account
 
