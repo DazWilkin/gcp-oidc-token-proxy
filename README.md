@@ -109,6 +109,13 @@ ${PWD}/kubernetes/deployment.yml > ${DEPLOYMENT}
 kubectl create --filename=${DEPLOYMENT} \
 --namespace=${NAMESPACE}
 
+# Await
+kubectl wait \
+--for=condition=Available \
+deployment/prometheus \
+--timeout=60s \
+--namespace=${NAMESPACE}
+
 # Don't do this in production
 kubectl port-forward deployment/prometheus \
 --namespace=${NAMESPACE} \
