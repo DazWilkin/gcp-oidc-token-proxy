@@ -39,6 +39,7 @@ echo ${ENDPOINT}
 ## Service Account
 
 ```bash
+PROJECT="[[YOUR-PROJECT-ID]]"
 ACCOUNT="oidc-token-proxy"
 EMAIL="${ACCOUNT}@${PROJECT}.iam.gserviceaccount.com"
 
