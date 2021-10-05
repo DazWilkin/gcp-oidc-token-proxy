@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  labels:
+    repo: gcp-oidc-token-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      repo: gcp-oidc-token-proxy
+  template:
+    metadata:
+      labels:
+        repo: gcp-oidc-token-proxy
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v2.30.2
+          imagePullPolicy: Always
+          args:
+          - --config.file=/etc/prometheus/prometheus.yml
+          - --web.enable-lifecycle
+          volumeMounts:
+          - name: config
+            mountPath: /etc/prometheus
+            readOnly: true
+        - name: gcp-oidc-token-proxy
+          image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:44f5bf9b4f7bb292691263c149f1defe2cc89efc
+          imagePullPolicy: Always
+          env:
+          - name: GOOGLE_APPLICATION_CREDENTIALS
+            value: /secrets/key.json
+          args:
+            - --target_url=https://some-service-xxxxxxxxxx-yy.a.run.app
+            - --port=7777
+          volumeMounts:
+            - name: secrets
+              mountPath: /secrets
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: CONFIG
+        - name: secrets
+          secret:
+            secretName: SECRET
