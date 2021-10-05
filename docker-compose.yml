@@ -29,7 +29,7 @@ services:
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/key.json
     volumes:
-    - ACCOUNT.json:/secrets/key.json
+    - ${PWD}/ACCOUNT.json:/secrets/key.json
     expose:
     - "7777"
     ports:
