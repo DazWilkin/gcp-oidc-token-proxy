@@ -117,9 +117,11 @@ deployment/prometheus \
 --namespace=${NAMESPACE}
 
 # Don't do this in production
+# Expose Prometheus on localhost:9090 and the proxy on localhost:7777/metrics
 kubectl port-forward deployment/prometheus \
 --namespace=${NAMESPACE} \
-9090:9090
+9090:9090 \
+7777:7777
 ```
 
 Once the deployment completes, you should be able to browse Prometheus' UI on `localhost:9090`
