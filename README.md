@@ -118,12 +118,15 @@ Once the deployment completes, you should be able to browse Prometheus' UI on `l
 
 ### Docker Compose
 
-When using Docker Compose, the value of `token_url` in `prometheus.yml` should reflect the name of the `gcp-oidc-token-proxy` service. It will work if you use e.g. `localhost:7777` because the service is exposed to the host **but** it's better to use the internal DNS name:
+Ensure `prometheus.yml` reflects the correct service URL.
+
+> **NOTE** the value of `token_url` in `prometheus.yml` should reflect the name of the `gcp-oidc-token-proxy` service. It will work if you use e.g. `localhost:7777` because the service is exposed to the host **but** it's better to use the internal DNS name:
 
 ```bash
 sed \
 --in-place \
 --expression="s|localhost:7777|gcp-oidc-token-proxy:7777|g" \
+--expression="s|some-service-xxxxxxxxxx-yy.a.run.app|${ENDPOINT}|g" \
 ${PWD}/prometheus.yml
 ```
 
@@ -144,8 +147,8 @@ gcp-oidc-token-proxy:
   environment:
     GOOGLE_APPLICATION_CREDENTIALS: /secrets/key.json
   volumes:
-  # Replace PWD and ACCOUNT with the correct values
-  - ./ACCOUNT/key.json:/secrets/key.json
+  # Replace ACCOUNT with the correct values
+  - ${PWD}/ACCOUNT/key.json:/secrets/key.json
   expose:
   - "7777"
   ports:
@@ -153,6 +156,8 @@ gcp-oidc-token-proxy:
   # E.g. ttp://localhost:7777/metrics
   - 7777:7777
 ```
+
+Then e.g. `docker-compose up`
 
 ### Docker
 
