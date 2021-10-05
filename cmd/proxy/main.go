@@ -16,9 +16,16 @@ import (
 	"github.com/go-logr/stdr"
 	"golang.org/x/oauth2"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"google.golang.org/api/idtoken"
+)
+
+const (
+	namespace string = "gcp"
+	subsystem string = "oidc_token_proxy"
 )
 
 var (
@@ -35,9 +42,26 @@ var (
 )
 
 var (
-	target_url = flag.String("target_url", "", "The URL of the target service")
-	port       = flag.Uint("port", 7777, "The endpoint of the proxy's HTTP server")
+	targetURL = flag.String("target_url", "", "The URL of the target service")
+	port      = flag.Uint("port", 7777, "The endpoint of the proxy's HTTP server")
 )
+
+var (
+	counterBuildTime = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:      "build_info",
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Help:      "A metric with a constant '1' value labels by build time, git commit, OS and Go versions",
+		}, []string{
+			"build_time",
+			"git_commit",
+			"os_version",
+			"go_version",
+		},
+	)
+)
+
 var (
 	log logr.Logger
 )
@@ -48,6 +72,13 @@ func init() {
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
 		log.Error(nil, "Unable to find GOOGLE_APPLICATION_CREDENTIALS in the environment")
 	}
+
+	counterBuildTime.With(prometheus.Labels{
+		"build_time": BuildTime,
+		"git_commit": GitCommit,
+		"os_version": OSVersion,
+		"go_version": GoVersion,
+	}).Inc()
 }
 
 // Refactor this
@@ -141,16 +172,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	flag.Parse()
 
-	if *target_url == "" {
+	if *targetURL == "" {
 		log.Error(nil, "Flag `target_url` is required as it is used as the audience value when constructing a TokenSource")
 		os.Exit(1)
 	}
 
-	log = log.WithValues("aud", *target_url)
+	log = log.WithValues("aud", *targetURL)
 
 	// Initialize TokenSource using Application Default Credentials
 	var err error
-	ts, err = idtoken.NewTokenSource(context.Background(), *target_url)
+	ts, err = idtoken.NewTokenSource(context.Background(), *targetURL)
 	if err != nil {
 		log.Error(err, "Unable to get default token source")
 		os.Exit(1)
