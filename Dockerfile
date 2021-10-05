@@ -33,7 +33,7 @@ RUN BUILD_TIME=$(date +%s) && \
 
 FROM scratch
 
-LABEL org.opencontainers.image.source https://github.com/DazWilkin/prometheus-oauth-proxy
+LABEL org.opencontainers.image.source https://github.com/DazWilkin/gcp-oidc-token-proxy
 
 COPY --from=build /bin/proxy /
 COPY --from=build /etc/passwd /etc/passwd
