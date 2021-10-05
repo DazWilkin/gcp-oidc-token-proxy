@@ -10,10 +10,10 @@ scrape_configs:
           - "localhost:9090"
 
   # GCP OAuth Token Proxy
-  - job_name: "gcp-oauth-token-proxy"
+  - job_name: "gcp-oidc-token-proxy"
     static_configs:
     - targets:
-      - "gcp-oauth-token-proxy:7777"
+      - "gcp-oidc-token-proxy:7777"
 
   # Cloud Run service
   - job_name: "cloudrun-service"
@@ -23,7 +23,7 @@ scrape_configs:
       client_secret: "anything"
       scopes:
       - "https://www.googleapis.com/auth/cloud-platform"
-      token_url: "http://gcp-oauth-token-proxy:7777/"
+      token_url: "http://gcp-oidc-token-proxy:7777/"
     static_configs:
       - targets:
           - "some-service-xxxxxxxxxx-yy.a.run.app:443"
