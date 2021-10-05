@@ -1,5 +1,5 @@
 ARG GOLANG_VERSION="1.17"
-ARG PROJECT="prometheus-oauth-proxy"
+ARG PROJECT="gcp-oidc-token-proxy"
 
 ARG COMMIT
 ARG VERSION
