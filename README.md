@@ -9,7 +9,7 @@ Prometheus supports only TLS and [OAuth2](https://prometheus.io/docs/prometheus/
 + Create [Service Account](#service-account)
 + [Run](#run) this proxy
 + Configure [Prometheus](#prometheus) to point at it
-+ Scrape e.g. Cloud Run services
++ [Scrape](#scrape) e.g. Cloud Run services
 
 ### Service Account
 
@@ -117,6 +117,10 @@ The proxy exports metrics too and these can be included:
     - "gcp-oauth-token-proxy:7777"
 ```
 
+## Scrape
+
+![Prometheus: Targets](/images/prometheus.targets.png)
+
 ## Setup
 
 ```bash
@@ -163,8 +167,6 @@ docker tag \
   ${GXR}/ackal-healthcheck-${TYPE}:6f29c437b6b7875edc13cfa48c5ea4dd77e06519
 
 docker push ${GXR}/ackal-healthcheck-${TYPE}:6f29c437b6b7875edc13cfa48c5ea4dd77e06519
-
-
 ```
 
 ## Build
