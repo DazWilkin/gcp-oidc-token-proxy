@@ -1,4 +1,4 @@
-module github.com/DazWilkin/prometheus-oauth-proxy
+module github.com/DazWilkin/gcp-oidc-token-proxy
 
 go 1.17
 
