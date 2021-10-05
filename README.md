@@ -118,13 +118,14 @@ Once the deployment completes, you should be able to browse Prometheus' UI on `l
 
 ### Docker Compose
 
-Ensure `prometheus.yml` reflects the correct service URL.
+Ensure `prometheus.yml` reflects the correct Cloud Run service URL.
 
-> **NOTE** the value of `token_url` in `prometheus.yml` should reflect the name of the `gcp-oidc-token-proxy` service. It will work if you use e.g. `localhost:7777` because the service is exposed to the host **but** it's better to use the internal DNS name:
+> **NOTE** `localhost` values will work when using Docker Compose but it is better to use the services' internal DNS name. In this case, `localhost:9090` becomes `prometheus:9090` and the two occurrences of `localhost:7777` should be replaced by `gcp-oidc-token-proxy:7777`:
 
 ```bash
 sed \
 --in-place \
+--expression="s|localhost:9090|prometheus:9090|g" \
 --expression="s|localhost:7777|gcp-oidc-token-proxy:7777|g" \
 --expression="s|some-service-xxxxxxxxxx-yy.a.run.app|${ENDPOINT}|g" \
 ${PWD}/prometheus.yml
