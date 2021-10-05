@@ -21,7 +21,7 @@ services:
     restart: always
     depends_on:
     - prometheus
-    image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:89c7784453dc0f52d53c80ca693a0cb30ef8641d
+    image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:8aab06216fa65f752331fe6997fb6affbb8593ba
     container_name: gcp-oidc-token-proxy
     command:
       - --target_url=https://some-service-xxxxxxxxxx-xx.a.run.app
