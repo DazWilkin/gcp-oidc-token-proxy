@@ -173,7 +173,7 @@ kubectl port-forward deployment/prometheus \
 7777:7777
 ```
 
-Once the deployment completes, you should be able to browse Prometheus' UI on `localhost:9090` and the OIDC Token Proxy's metrics on `localhost:7777`
+Once the deployment completes, you should be able to browse Prometheus' UI on `localhost:9090` and the OIDC Token Proxy's metrics on `localhost:7777`.
 
 To check logs:
 
@@ -197,58 +197,95 @@ Ensure `prometheus.yml` reflects the correct Cloud Run service URL.
 > **NOTE** `localhost` values will work when using Docker Compose but it is better to use the services' internal DNS name. In this case, `localhost:9090` becomes `prometheus:9090` and the two occurrences of `localhost:7777` should be replaced by `gcp-oidc-token-proxy:7777`:
 
 ```bash
+ACCOUNT="..."
+ENDPOINT="..."
+
 # File: prometheus.yml
+# Update audience and target-url values to reflect the Cloud Run service URL
 # Use Docker Compose internal DNS name to the reference to the Prometheus service
 # Use Docker Compose internal DNS name to reference the GCP OIDC Token Proxy service
+PROMETHEUS=$(mktemp)
+
 sed \
---in-place \
+--expression="s|some-service-xxxxxxxxxx-xx.a.run.app|${ENDPOINT}|g" \
 --expression="s|localhost:9090|prometheus:9090|g" \
 --expression="s|localhost:7777|gcp-oidc-token-proxy:7777|g" \
-${PWD}/prometheus.yml
+${PWD}/prometheus.yml > ${PROMETHEUS}
+
+
+# File: docker-compose.yml
+# Update the reference to prometheus.yml with the value of the PROMETHEUS variable
+# Update the reference to ACCOUNT with the value of the ACCOUNT variable
+DOCKER_COMPOSE=$(mktemp)
+
+sed \
+--expression="s|\${PWD}/prometheus.yml|${PROMETHEUS}|g" \
+--expression="s|ACCOUNT.json|${ACCOUNT}.json|g" \
+${PWD}/docker-compose.yml > ${DOCKER_COMPOSE}
+
+docker-compose --file=${DOCKER_COMPOSE} up
 ```
 
-And:
+Once the services have been started, you should be able to browse Prometheus' UI on `localhost:9090` and the OIDC Token Proxy's metrics on `localhost:7777`.
 
-```YAML
-gcp-oidc-token-proxy:
-  restart: always
-  depends_on:
-  - prometheus
-  image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:f8b5f3f69065ff2e9fc248b91f797a5090128615
-  container_name: gcp-oidc-token-proxy
-  command:
-    # Use which port value you wish
-    - --port=7777
-  environment:
-    GOOGLE_APPLICATION_CREDENTIALS: /secrets/key.json
-  volumes:
-  # Replace ACCOUNT with the correct values
-  - ${PWD}/ACCOUNT/key.json:/secrets/key.json
-  expose:
-  - "7777"
-  ports:
-  # Exposed on host only to facilitate testing
-  # E.g. ttp://localhost:7777/metrics
-  - 7777:7777
+
+To check logs:
+
+```bash
+SERVICE="prometheus" # Or "gcp-oidc-token-proxy"
+docker-compose logs ${SERVICE}
 ```
-
-Then e.g. `docker-compose up`
 
 ### Docker
 
 ```bash
-# Replace ENDPOINT value with the URL of e.g. Cloud Run service
-ENDPOINT="https://some-service-xxxxxxxxxx-xx.a.run.app"
-PORT="7777"
+ACCOUNT="..."
+ENDPOINT="..."
 
-# The Service Account is mounted so that it is accessible to the container
+# File: prometheus.yml
+# Update audience and target-url values to reflect the Cloud Run service URL
+PROMETHEUS="${PWD}/prometheus.tmp"
+
+sed \
+--expression="s|some-service-xxxxxxxxxx-xx.a.run.app|${ENDPOINT}|g" \
+${PWD}/prometheus.yml > ${PROMETHEUS}
+
 docker run \
---interactive --tty --rm \
+--detach --rm \
+--name="prometheus" \
+--net=host \
+--publish=9090:9090 \
+--volume=${PROMETHEUS}:/etc/prometheus/prometheus.yml \
+docker.io/prom/prometheus:v2.30.2 \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --web.enable-lifecycle
+
+docker run \
+--detach --rm \
+--name="gcp-oidc-token-proxy" \
 --publish=7777:7777 \
---volume=${PWD}/key.json:/secrets/${ACCOUNT}.json \
---env=GOOGLE_APPLICATION_CREDENTIALS=/secret/key.json \
+--volume=${PWD}/${ACCOUNT}.json:/secrets/key.json \
+--env=GOOGLE_APPLICATION_CREDENTIALS=/secrets/key.json \
 ghcr.io/dazwilkin/gcp-oidc-token-proxy:f8b5f3f69065ff2e9fc248b91f797a5090128615 \
-  --port=${PORT}
+  --port=7777
+```
+
+Once the containers are running, you should be able to browse Prometheus' UI on `localhost:9090` and the OIDC Token Proxy's metrics on `localhost:7777`.
+
+To check logs:
+
+```bash
+NAME="prometheus" # Or "gcp-oidc-token-proxy"
+docker logs ${NAME}
+```
+
+When done:
+
+```bash
+for NAME in "prometheus" "gcp-oidc-token-proxy"
+do
+  docker container stop ${NAME}
+done
 ```
 
 ## Prometheus
@@ -264,6 +301,7 @@ The Prometheus configuration file (`prometheus.yml`) needs to include an `[OAuth
     client_secret: "anything"
     token_url: "http://gcp-oidc-token-proxy:7777/"
     endpoint_params:
+      # The audience value must include scheme: (e.g. https:)
       audience: "https://some-service-xxxxxxxxxx-xx.a.run.app"
   static_configs:
   - targets:
@@ -273,7 +311,7 @@ The Prometheus configuration file (`prometheus.yml`) needs to include an `[OAuth
 
 The proxy exports metrics too and these can be included:
 
-```
+```YAML
 # GCP OAuth Token Proxy
 - job_name: "gcp-oidc-token-proxy"
   static_configs:
