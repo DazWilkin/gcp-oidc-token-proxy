@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	stdlog "log"
 	"net/http"
 	"os"
@@ -42,8 +41,7 @@ var (
 )
 
 var (
-	targetURL = flag.String("target_url", "", "The URL of the target service")
-	port      = flag.Uint("port", 7777, "The endpoint of the proxy's HTTP server")
+	port = flag.Uint("port", 7777, "The endpoint of the proxy's HTTP server")
 )
 
 var (
@@ -65,6 +63,10 @@ var (
 var (
 	log logr.Logger
 )
+var (
+	tokenSources = map[string]oauth2.TokenSource{}
+	tokens       = map[string]*oauth2.Token{}
+)
 
 func init() {
 	log = stdr.NewWithOptions(stdlog.New(os.Stderr, "", stdlog.LstdFlags), stdr.Options{LogCaller: stdr.All})
@@ -81,83 +83,90 @@ func init() {
 	}).Inc()
 }
 
-// Refactor this
-var (
-	ts  oauth2.TokenSource
-	tok *oauth2.Token
-)
-
-func getToken() (err error) {
-	tok, err = ts.Token()
-	return
-}
 func handler(w http.ResponseWriter, r *http.Request) {
-	log = log.WithName("handler")
+	log := log.WithName("handler")
 
-	// Debugging: read the request body
-	b, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Error(err, "Unable to read body")
-	}
-
-	// Debugging: log the request's details
-	log.Info("Body",
+	log.Info("Request",
 		"Host", r.URL.Host,
 		"Path", r.URL.Path,
 		"Query", r.URL.RawQuery,
-		"Body", string(b),
 	)
 
-	// Check whether token has already been initialized
-	if tok == nil {
-		log.Info("Token being initialized")
-		if err := getToken(); err != nil {
+	// Expect POST
+	if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Expect Content-Type
+	if r.Header.Get("content-type") != "application/x-www-form-urlencoded" {
+		w.WriteHeader(http.StatusUnsupportedMediaType)
+		return
+	}
+
+	r.ParseForm()
+
+	// Expect FORM property: audience
+	audiences, ok := r.PostForm["audience"]
+	if !ok {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if len(audiences) != 1 {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	audience := audiences[0]
+	log = log.WithValues("audience", audience)
+
+	// Is a TokenSource for this audience cached?
+	ts, ok := tokenSources[audience]
+	if !ok {
+		// Initialize TokenSource using Application Default Credentials
+		log.Info("Creating Token Source")
+		var err error
+		ts, err = idtoken.NewTokenSource(context.Background(), audience)
+		if err != nil {
+			log.Error(err, "Unable to get default token source")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		// Cache tokenSource
+		log.Info("Caching Token Source")
+		tokenSources[audience] = ts
 	}
 
-	// Check whether token has expired
-	// If just initialized, probably redundant to check its expiry
-	if int(time.Until(tok.Expiry).Seconds()) < 5 {
-		log.Info("Refreshing Token as nearing expiry or expired")
-		if err := getToken(); err != nil {
+	// Is a token for this audience cached?
+	tok, ok := tokens[audience]
+	// If not or if the token is at|near expiry, refresh it
+	if !ok || (ok && int(time.Until(tok.Expiry).Seconds()) < 5) {
+		log.Info("Refreshing Token")
+		var err error
+		tok, err = ts.Token()
+		if err != nil {
 			log.Error(err, "Unable to get token from token source")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-	}
 
-	// Debugging: log the token
-	// TODO(dazwilkin) Don't do this in production
-	log.Info("Token",
-		"token", tok,
-	)
+		// Cache token
+		log.Info("Caching Token")
+		tokens[audience] = tok
+	}
 
 	// The response isn't quite oauth2.Token
 	// https://pkg.go.dev/golang.org/x/oauth2#Token
-	// Uses expires_in instead of expiry !??
-	// By the time of its calculation, it's likely <3600
 	// Cloud Run accepts e.g. --header="Authorization: Bearer $(gcloud auth print-identity-token)"
+	log.Info("Creating response")
 	resp := struct {
-		AccessToken  string `json:"access_token"`
-		ExpiresIn    int    `json:"expires_in"`
-		RefreshToken string `json:"refresh_token"`
-		Scope        string `json:"scope"`
-		TokenType    string `json:"token_type"`
+		AccessToken string `json:"access_token"`
 	}{
-		AccessToken:  tok.AccessToken,
-		ExpiresIn:    int(time.Until(tok.Expiry).Seconds()),
-		RefreshToken: tok.AccessToken,
-		TokenType:    "bearer",
-		Scope:        "https://www.googleapis.com/auth/cloud-platform",
+		AccessToken: tok.AccessToken,
 	}
 
-	// Debugging: log the response
-	log.Info("Response",
-		"response", resp,
-	)
-
+	log.Info("Marshaling response")
 	j, err := json.Marshal(resp)
 	if err != nil {
 		log.Error(err, "Unable to marshal JSON response")
@@ -168,25 +177,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Done
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprint(w, string(j))
+	log.Info("Done")
 }
 func main() {
 	flag.Parse()
 
-	if *targetURL == "" {
-		log.Error(nil, "Flag `target_url` is required as it is used as the audience value when constructing a TokenSource")
-		os.Exit(1)
-	}
-
-	log = log.WithValues("aud", *targetURL)
-
-	// Initialize TokenSource using Application Default Credentials
-	var err error
-	ts, err = idtoken.NewTokenSource(context.Background(), *targetURL)
-	if err != nil {
-		log.Error(err, "Unable to get default token source")
-		os.Exit(1)
-	}
-
+	log.Info("Configuring handlers")
 	http.HandleFunc("/", handler)
 	http.Handle("/metrics", promhttp.Handler())
 
