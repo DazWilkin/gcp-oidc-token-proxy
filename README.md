@@ -131,14 +131,14 @@ kubectl create namespace ${NAMESPACE}
 # File: prometheus.yml
 # Update audience and target-url values to reflect the Cloud Run service URL
 # References to gcp-oidc-token-proxy as a sidecar should remain as localhost
-CONFIGMAP=$(mktemp)
+PROMETHEUS=$(mktemp)
 
 sed \
 --expression="s|some-service-xxxxxxxxxx-xx.a.run.app|${ENDPOINT}|g" \
-${PWD}/prometheus.yml > ${CONFIGMAP}
+${PWD}/prometheus.yml > ${PROMETHEUS}
 
 kubectl create configmap ${CONFIG} \
---from-file=prometheus.yml=${CONFIGMAP} \
+--from-file=prometheus.yml=${PROMETHEUS} \
 --namespace=${NAMESPACE}
 
 kubectl create secret generic ${SECRET} \
