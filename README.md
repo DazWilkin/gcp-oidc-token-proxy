@@ -222,3 +222,7 @@ The proxy exports metrics too and these can be included:
 ## Scrape
 
 ![Prometheus: Targets](/images/prometheus.targets.png)
+
+<hr/>
+<br/>
+<a href="https://www.buymeacoffee.com/dazwilkin" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
