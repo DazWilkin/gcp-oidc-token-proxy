@@ -5,6 +5,39 @@
 
 A way to configure Prometheus to scrape services deployed to [Google Cloud Platform (GCP)](https://cloud.google.com) that require authentication (using Google-minted OpenID Connect ID Tokens).
 
+> **TL;DR**
+>
+> ```YAML
+> # Cloud Run service
+> - job_name: "cloudrun-service"
+>   scheme: https
+>   oauth2:
+>     client_id: "anything"
+>     client_secret: "anything"
+>     token_url: "http://gcp-oidc-token-proxy:7777"
+>     endpoint_params:
+>       audience: https://some-service-xxxxxxxxxx-yy.a.run.app
+>   static_configs:
+>   - targets:
+>     - "some-service-xxxxxxxxxx-yy.a.run.app:443"
+> ```
+>
+> **NOTE**
+> + `client_id` and `client_secret` must be included but can be any string other than `""`
+> + `token_url` is a reference to the endpoint of the GCP OIDC Token Proxy
+> + `scopes` is not required (and is mutually exclusive with `audience`)
+> + `oauth2.endpoint_params` is used to provide the proxy with an `audience` value
+> + For Cloud Run services, the identity token's audience must be the [[TODO]]
+
+## ToC
+
++ [Background](#background)
++ [Cloud Run service](#cloud-run-service)
++ [Service Account](#service-account)
++ [Run](#run)
+
+## Background
+
 Prometheus supports only TLS and [OAuth2](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#oauth2) for authenticating scrape targets. Unfortunately, the [OAuth2](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#oauth2) configuration is insufficiently flexible to permit using a Google Service Account as an identity and to mine ID Tokens with the Service Account. This 'sidecar' (thanks [Levi Harrison](https://github.com/leviharrison) for the suggestion in [this](https://stackoverflow.com/a/69419467/609290) comment thread) performs as a proxy, configured to run as a Google Service Account, that mints ID Tokens that can be used by Prometheus' OAuth2 config.
 
 Thanks also to [Salmaan](https://github.com/salrashid123) for guidance navigating Google's seeming myriad of OAuth2 and ID token related libraries and for the short-circuit in using ID tokens as the Bearer value.
@@ -80,9 +113,9 @@ SECRET="${ACCOUNT}"
 
 kubectl create namespace ${NAMESPACE}
 
-# Revise the Cloud Run service URL in prometheus.yml before creating the ConfigMap
-# The Deployment runs the the proxy as a sidecar so the two references to it, as a
-# target and as the token_url value should be left as localhost
+# File: prometheus.yml
+# Update audience and target-url values to reflect the Cloud Run service URL
+# References to gcp-oidc-token-proxy as a sidecar should remain as localhost
 CONFIGMAP=$(mktemp)
 
 sed \
@@ -97,12 +130,12 @@ kubectl create secret generic ${SECRET} \
 --from-file=key.json=${PWD}/${ACCOUNT}.json \
 --namespace=${NAMESPACE}
 
-# Deployment
-# Revise manually or using sed before creating
+# File: deployment.yml
+# Update the reference to the ConfigMap name
+# Update the reference to the Secret name
 DEPLOYMENT=$(mktemp)
 
 sed \
---expression="s|https://some-service-xxxxxxxxxx-yy.a.run.app|https://${ENDPOINT}|g" \
 --expression="s|name: CONFIG|name: ${CONFIG}|g" \
 --expression="s|secretName: SECRET|secretName: ${SECRET}|g" \
 ${PWD}/kubernetes/deployment.yml > ${DEPLOYMENT}
@@ -134,11 +167,13 @@ Ensure `prometheus.yml` reflects the correct Cloud Run service URL.
 > **NOTE** `localhost` values will work when using Docker Compose but it is better to use the services' internal DNS name. In this case, `localhost:9090` becomes `prometheus:9090` and the two occurrences of `localhost:7777` should be replaced by `gcp-oidc-token-proxy:7777`:
 
 ```bash
+# File: prometheus.yml
+# Use Docker Compose internal DNS name to the reference to the Prometheus service
+# Use Docker Compose internal DNS name to reference the GCP OIDC Token Proxy service
 sed \
 --in-place \
 --expression="s|localhost:9090|prometheus:9090|g" \
 --expression="s|localhost:7777|gcp-oidc-token-proxy:7777|g" \
---expression="s|some-service-xxxxxxxxxx-yy.a.run.app|${ENDPOINT}|g" \
 ${PWD}/prometheus.yml
 ```
 
@@ -152,8 +187,6 @@ gcp-oidc-token-proxy:
   image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:2e16a45e9e3682b3b6aaf9cf625bba864181b7a2
   container_name: gcp-oidc-token-proxy
   command:
-    # Replace the target_url value with the URL of e.g. Cloud Run service
-    - --target_url=https://some-service-xxxxxxxxxx-yy.a.run.app
     # Use which port value you wish
     - --port=7777
   environment:
@@ -185,7 +218,6 @@ docker run \
 --volume=${PWD}/key.json:/secrets/${ACCOUNT}.json \
 --env=GOOGLE_APPLICATION_CREDENTIALS=/secret/key.json \
 ghcr.io/dazwilkin/gcp-oidc-token-proxy:2e16a45e9e3682b3b6aaf9cf625bba864181b7a2 \
-  --target_url=${ENDPOINT} \
   --port=${PORT}
 ```
 
@@ -200,9 +232,9 @@ The Prometheus configuration file (`prometheus.yml`) needs to include an `[OAuth
   oauth2:
     client_id: "anything"
     client_secret: "anything"
-    scopes:
-    - "https://www.googleapis.com/auth/cloud-platform"
     token_url: "http://gcp-oidc-token-proxy:7777/"
+    endpoint_params:
+      audience: "https://some-service-xxxxxxxxxx-yy.a.run.app"
   static_configs:
   - targets:
     # Port 443 is not strictly necessary here as the scheme is HTTPS and 443 is the default port
