@@ -9,17 +9,29 @@ A way to configure Prometheus to scrape services deployed to [Google Cloud Platf
 >
 > ```YAML
 > # Cloud Run service
-> - job_name: "cloudrun-service"
+> - job_name: "some-service-xxxxxxxxxx-xx"
 >   scheme: https
 >   oauth2:
 >     client_id: "anything"
 >     client_secret: "anything"
 >     token_url: "http://gcp-oidc-token-proxy:7777"
 >     endpoint_params:
->       audience: https://some-service-xxxxxxxxxx-yy.a.run.app
+>       audience: https://some-service-xxxxxxxxxx-xx.a.run.app
 >   static_configs:
 >   - targets:
->     - "some-service-xxxxxxxxxx-yy.a.run.app:443"
+>     - "some-service-xxxxxxxxxx-xx.a.run.app:443"
+> - job_name: "some-service-yyyyyyyyyy-yy"
+>   scheme: https
+>   oauth2:
+>     client_id: "anything"
+>     client_secret: "anything"
+>     token_url: "http://gcp-oidc-token-proxy:7777"
+>     endpoint_params:
+>       audience: https://some-service-yyyyyyyyyy-yy.a.run.app
+>   static_configs:
+>   - targets:
+>     - "some-service-yyyyyyyyyy-yy.a.run.app:443"
+
 > ```
 >
 > **NOTE**
@@ -119,7 +131,7 @@ kubectl create namespace ${NAMESPACE}
 CONFIGMAP=$(mktemp)
 
 sed \
---expression="s|some-service-xxxxxxxxxx-yy.a.run.app|${ENDPOINT}|g" \
+--expression="s|some-service-xxxxxxxxxx-xx.a.run.app|${ENDPOINT}|g" \
 ${PWD}/prometheus.yml > ${CONFIGMAP}
 
 kubectl create configmap ${CONFIG} \
@@ -208,7 +220,7 @@ Then e.g. `docker-compose up`
 
 ```bash
 # Replace ENDPOINT value with the URL of e.g. Cloud Run service
-ENDPOINT="https://some-service-xxxxxxxxxx-yy.a.run.app"
+ENDPOINT="https://some-service-xxxxxxxxxx-xx.a.run.app"
 PORT="7777"
 
 # The Service Account is mounted so that it is accessible to the container
@@ -234,11 +246,11 @@ The Prometheus configuration file (`prometheus.yml`) needs to include an `[OAuth
     client_secret: "anything"
     token_url: "http://gcp-oidc-token-proxy:7777/"
     endpoint_params:
-      audience: "https://some-service-xxxxxxxxxx-yy.a.run.app"
+      audience: "https://some-service-xxxxxxxxxx-xx.a.run.app"
   static_configs:
   - targets:
     # Port 443 is not strictly necessary here as the scheme is HTTPS and 443 is the default port
-    - "some-service-xxxxxxxxxx-yy.a.run.app:443"
+    - "some-service-xxxxxxxxxx-xx.a.run.app:443"
 ```
 
 The proxy exports metrics too and these can be included:

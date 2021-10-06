@@ -23,7 +23,7 @@ scrape_configs:
       client_secret: "anything"
       token_url: "http://localhost:7777"
       endpoint_params:
-        audience: "some-service-xxxxxxxxxx-yy.a.run.app"
+        audience: "some-service-xxxxxxxxxx-xx.a.run.app"
     static_configs:
       - targets:
-          - "some-service-xxxxxxxxxx-yy.a.run.app:443:443"
+          - "some-service-xxxxxxxxxx-xx.a.run.app:443:443"
