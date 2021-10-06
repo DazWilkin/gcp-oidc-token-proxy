@@ -4,7 +4,7 @@ services:
   prometheus:
     restart: always
     depends_on: []
-    image: prom/prometheus:v2.30.2
+    image: docker.io/prom/prometheus:v2.30.2
     container_name: prometheus
     command:
       - --config.file=/etc/prometheus/prometheus.yml
@@ -24,7 +24,6 @@ services:
     image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:2e16a45e9e3682b3b6aaf9cf625bba864181b7a2
     container_name: gcp-oidc-token-proxy
     command:
-      - --target_url=https://some-service-xxxxxxxxxx-xx.a.run.app
       - --port=7777
     environment:
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/key.json
@@ -34,3 +33,4 @@ services:
     - "7777"
     ports:
     - 7777:7777
+  
