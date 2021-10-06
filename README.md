@@ -149,7 +149,7 @@ gcp-oidc-token-proxy:
   restart: always
   depends_on:
   - prometheus
-  image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:8aab06216fa65f752331fe6997fb6affbb8593ba
+  image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:2e16a45e9e3682b3b6aaf9cf625bba864181b7a2
   container_name: gcp-oidc-token-proxy
   command:
     # Replace the target_url value with the URL of e.g. Cloud Run service
@@ -184,7 +184,7 @@ docker run \
 --publish=7777:7777 \
 --volume=${PWD}/key.json:/secrets/${ACCOUNT}.json \
 --env=GOOGLE_APPLICATION_CREDENTIALS=/secret/key.json \
-ghcr.io/dazwilkin/gcp-oidc-token-proxy:8aab06216fa65f752331fe6997fb6affbb8593ba \
+ghcr.io/dazwilkin/gcp-oidc-token-proxy:2e16a45e9e3682b3b6aaf9cf625bba864181b7a2 \
   --target_url=${ENDPOINT} \
   --port=${PORT}
 ```
