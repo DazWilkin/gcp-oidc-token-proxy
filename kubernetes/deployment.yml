@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: prom/prometheus:v2.30.2
+          image: docker.io/prom/prometheus:v2.30.2
           imagePullPolicy: Always
           args:
           - --config.file=/etc/prometheus/prometheus.yml
@@ -32,7 +32,6 @@ spec:
           - name: GOOGLE_APPLICATION_CREDENTIALS
             value: /secrets/key.json
           args:
-            - --target_url=https://some-service-xxxxxxxxxx-yy.a.run.app
             - --port=7777
           volumeMounts:
             - name: secrets
