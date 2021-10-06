@@ -39,7 +39,7 @@ A way to configure Prometheus to scrape services deployed to [Google Cloud Platf
 > + `token_url` is a reference to the endpoint of the GCP OIDC Token Proxy
 > + `scopes` is not required (and is mutually exclusive with `audience`)
 > + `oauth2.endpoint_params` is used to provide the proxy with an `audience` value
-> + For Cloud Run services, the identity token's audience must be the [[TODO]]
+> + For Cloud Run services, the identity token's audience must include `scheme:` (i.e. `https:`)
 
 ## ToC
 
@@ -119,8 +119,11 @@ There are 3 steps to deploy the solution to Kubernetes:
 > **NOTE** `gcp-oidc-token-proxy` need not be deployed as a sidecar.
 
 ```bash
+ACCOUNT="..."
+ENDPOINT="..."
+
 NAMESPACE="gcp-oidc-token-proxy"
-CONFIG="prometheus-config"
+CONFIG="prometheus"
 SECRET="${ACCOUNT}"
 
 kubectl create namespace ${NAMESPACE}
@@ -170,7 +173,22 @@ kubectl port-forward deployment/prometheus \
 7777:7777
 ```
 
-Once the deployment completes, you should be able to browse Prometheus' UI on `localhost:9090`
+Once the deployment completes, you should be able to browse Prometheus' UI on `localhost:9090` and the OIDC Token Proxy's metrics on `localhost:7777`
+
+To check logs:
+
+```bash
+CONTAINER="prometheus" # Or "gcp-oidc-token-proxy"
+kubectl logs deployment/prometheus \
+--container=${CONTAINER} \
+--namespace=${NAMESPACE}
+```
+
+When done:
+
+```bash
+kubectl delete namespace/${NAMESPACE}
+```
 
 ### Docker Compose
 
