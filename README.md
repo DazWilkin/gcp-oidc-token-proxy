@@ -244,7 +244,7 @@ ENDPOINT="..."
 
 # File: prometheus.yml
 # Update audience and target-url values to reflect the Cloud Run service URL
-PROMETHEUS="${PWD}/prometheus.tmp"
+PROMETHEUS=$(mktemp)
 
 sed \
 --expression="s|some-service-xxxxxxxxxx-xx.a.run.app|${ENDPOINT}|g" \
