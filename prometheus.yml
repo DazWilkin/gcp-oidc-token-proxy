@@ -26,4 +26,4 @@ scrape_configs:
         audience: "some-service-xxxxxxxxxx-xx.a.run.app"
     static_configs:
       - targets:
-          - "some-service-xxxxxxxxxx-xx.a.run.app:443:443"
+          - "some-service-xxxxxxxxxx-xx.a.run.app:443"
