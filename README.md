@@ -266,7 +266,7 @@ docker run \
 --publish=7777:7777 \
 --volume=${PWD}/${ACCOUNT}.json:/secrets/key.json \
 --env=GOOGLE_APPLICATION_CREDENTIALS=/secrets/key.json \
-ghcr.io/dazwilkin/gcp-oidc-token-proxy:f8b5f3f69065ff2e9fc248b91f797a5090128615 \
+ghcr.io/dazwilkin/gcp-oidc-token-proxy:39571df7fe06a8514f482b9a720db1df6075296d \
   --port=7777
 ```
 
