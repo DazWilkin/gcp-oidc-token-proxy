@@ -21,9 +21,9 @@ scrape_configs:
     oauth2:
       client_id: "anything"
       client_secret: "anything"
-      scopes:
-      - "https://www.googleapis.com/auth/cloud-platform"
       token_url: "http://localhost:7777"
+      endpoint_params:
+        audience: "some-service-xxxxxxxxxx-yy.a.run.app"
     static_configs:
       - targets:
-          - "some-service-xxxxxxxxxx-yy.a.run.app:443"
+          - "some-service-xxxxxxxxxx-yy.a.run.app:443:443"
