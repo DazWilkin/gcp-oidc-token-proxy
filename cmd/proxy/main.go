@@ -152,9 +152,17 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Cloud Run accepts e.g. --header="Authorization: Bearer $(gcloud auth print-identity-token)"
 	log.Info("Creating response")
 	resp := struct {
-		AccessToken string `json:"access_token"`
+		AccessToken  string `json:"access_token"`
+		ExpiresIn    int    `json:"expires_in"`
+		RefreshToken string `json:"refresh_token"`
+		Scope        string `json:"scope"`
+		TokenType    string `json:"token_type"`
 	}{
-		AccessToken: tok.AccessToken,
+		AccessToken:  tok.AccessToken,
+		ExpiresIn:    int(time.Until(tok.Expiry).Seconds()),
+		RefreshToken: tok.AccessToken,
+		TokenType:    "bearer",
+		Scope:        "https://www.googleapis.com/auth/cloud-platform",
 	}
 
 	log.Info("Marshaling response")
