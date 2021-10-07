@@ -140,8 +140,8 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Is a token for this audience cached?
 	tok, ok := tokens[audience]
-	// If not or if the token is at|near expiry, refresh it
-	if !ok || (ok && int(time.Until(tok.Expiry).Seconds()) < 5) {
+	// If not or if the token expired, refresh it
+	if !ok || (ok && tok.Expiry.Before(time.Now())) {
 		log.Info("Refreshing Token")
 		var err error
 		tok, err = ts.Token()
