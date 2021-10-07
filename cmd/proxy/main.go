@@ -109,36 +109,36 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	ts, ok := tokenSources[audience]
 	if !ok {
 		// Initialize TokenSource using Application Default Credentials
-		log.Info("Creating Token Source")
+		log.Info("Creating and caching TokenSource")
 		var err error
-		ts, err = idtoken.NewTokenSource(context.Background(), audience)
+		tokenSources[audience], err = idtoken.NewTokenSource(context.Background(), audience)
 		if err != nil {
-			log.Error(err, "Unable to get default token source")
+			log.Error(err, "Unable to get default TokenSource")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		// Cache tokenSource
-		log.Info("Caching Token Source")
-		tokenSources[audience] = ts
 	}
 
 	// Is a token for this audience cached?
 	tok, ok := tokens[audience]
-	// If not or if the token expired, refresh it
-	if !ok || (ok && tok.Expiry.Before(time.Now())) {
-		log.Info("Refreshing Token")
+
+	// if ok but the token has expired, then it's really not ok
+	if ok {
+		if tok.Expiry.Before(time.Now()) {
+			ok = false
+		}
+	}
+
+	// If not ok, get a new Token
+	if !ok {
+		log.Info("Creating and caching Token")
 		var err error
-		tok, err = ts.Token()
+		tokens[audience], err = ts.Token()
 		if err != nil {
-			log.Error(err, "Unable to get token from token source")
+			log.Error(err, "Unable create Token")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
-		// Cache token
-		log.Info("Caching Token")
-		tokens[audience] = tok
 	}
 
 	// The response isn't quite oauth2.Token
