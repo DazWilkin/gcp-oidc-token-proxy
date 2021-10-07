@@ -68,21 +68,6 @@ var (
 	tokens       = map[string]*oauth2.Token{}
 )
 
-func init() {
-	log = stdr.NewWithOptions(stdlog.New(os.Stderr, "", stdlog.LstdFlags), stdr.Options{LogCaller: stdr.All})
-
-	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
-		log.Error(nil, "Unable to find GOOGLE_APPLICATION_CREDENTIALS in the environment")
-	}
-
-	counterBuildTime.With(prometheus.Labels{
-		"build_time": BuildTime,
-		"git_commit": GitCommit,
-		"os_version": OSVersion,
-		"go_version": GoVersion,
-	}).Inc()
-}
-
 func handler(w http.ResponseWriter, r *http.Request) {
 	log := log.WithName("handler")
 
@@ -179,8 +164,40 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(j))
 	log.Info("Done")
 }
+
 func main() {
+	log = stdr.NewWithOptions(
+		stdlog.New(
+			os.Stdout,
+			"",
+			stdlog.LstdFlags,
+		),
+		stdr.Options{
+			LogCaller: stdr.All,
+		},
+	)
+	log := log.WithName("main")
+
 	flag.Parse()
+
+	// Proxy requires Application Default Credentials to authenticate with Google
+	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
+		log.Error(nil, "Unable to find GOOGLE_APPLICATION_CREDENTIALS in the environment")
+	}
+
+	// Create Prometheus 'static' counter for build config
+	log.Info("Build config",
+		"build_time", BuildTime,
+		"git_commit", GitCommit,
+		"os_version", OSVersion,
+		"go_version", GoVersion,
+	)
+	counterBuildTime.With(prometheus.Labels{
+		"build_time": BuildTime,
+		"git_commit": GitCommit,
+		"os_version": OSVersion,
+		"go_version": GoVersion,
+	}).Inc()
 
 	log.Info("Configuring handlers")
 	http.HandleFunc("/", handler)
@@ -190,11 +207,11 @@ func main() {
 	// Doing so triggers the root handler and this results in tokens being minted
 	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {})
 
-	log.Info("Starting token server",
+	log.Info("Starting OIDC Token Proxy",
 		"port", *port,
 	)
 	log.Error(http.ListenAndServe(
 		fmt.Sprintf(":%d", *port),
 		nil,
-	), "failed to start token server")
+	), "Failed to start OIDC Token Proxy")
 }
