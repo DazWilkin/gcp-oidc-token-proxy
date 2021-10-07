@@ -111,12 +111,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		// Initialize TokenSource using Application Default Credentials
 		log.Info("Creating and caching TokenSource")
 		var err error
-		tokenSources[audience], err = idtoken.NewTokenSource(context.Background(), audience)
+		ts, err = idtoken.NewTokenSource(context.Background(), audience)
 		if err != nil {
 			log.Error(err, "Unable to get default TokenSource")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		// Cache TokenSource
+		tokenSources[audience] = ts
 	}
 
 	// Is a token for this audience cached?
@@ -133,12 +136,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		log.Info("Creating and caching Token")
 		var err error
-		tokens[audience], err = ts.Token()
+		tok, err = ts.Token()
 		if err != nil {
 			log.Error(err, "Unable create Token")
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		// Cache Token
+		tokens[audience] = tok
 	}
 
 	// The response isn't quite oauth2.Token
