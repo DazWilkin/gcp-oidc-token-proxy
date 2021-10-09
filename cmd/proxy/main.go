@@ -58,6 +58,46 @@ var (
 			"go_version",
 		},
 	)
+	tokensourcesTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:      "tokensources_total",
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Help:      "The total number of TokenSources created",
+		}, []string{
+			"audience",
+		},
+	)
+	tokensourcesError = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:      "tokensources_error",
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Help:      "The total number of TokenSources failed",
+		}, []string{
+			"audience",
+		},
+	)
+	tokensTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:      "tokens_total",
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Help:      "The total number of Tokens created",
+		}, []string{
+			"audience",
+		},
+	)
+	tokensError = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:      "tokens_error",
+			Namespace: namespace,
+			Subsystem: subsystem,
+			Help:      "The total number of Tokens failed",
+		}, []string{
+			"audience",
+		},
+	)
 )
 
 var (
@@ -110,10 +150,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		// Initialize TokenSource using Application Default Credentials
 		log.Info("Creating and caching TokenSource")
+		tokensourcesTotal.With(prometheus.Labels{"audience": audience}).Inc()
 		var err error
 		ts, err = idtoken.NewTokenSource(context.Background(), audience)
 		if err != nil {
 			log.Error(err, "Unable to get default TokenSource")
+			tokensourcesError.With(prometheus.Labels{"audience": audience}).Inc()
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -135,10 +177,12 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// If not ok, get a new Token
 	if !ok {
 		log.Info("Creating and caching Token")
+		tokensTotal.With(prometheus.Labels{"audience": audience}).Inc()
 		var err error
 		tok, err = ts.Token()
 		if err != nil {
 			log.Error(err, "Unable create Token")
+			tokensError.With(prometheus.Labels{"audience": audience}).Inc()
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
