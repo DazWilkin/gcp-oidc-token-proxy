@@ -4,7 +4,7 @@ ARG PROJECT="gcp-oidc-token-proxy"
 ARG COMMIT
 ARG VERSION
 
-FROM golang:${GOLANG_VERSION} as build
+FROM https://docker.io/golang:${GOLANG_VERSION} as build
 
 ARG PROJECT
 
