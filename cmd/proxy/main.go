@@ -150,12 +150,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		// Initialize TokenSource using Application Default Credentials
 		log.Info("Creating and caching TokenSource")
-		tokensourcesTotal.With(prometheus.Labels{"audience": audience}).Inc()
+		tokensourcesTotal.With(prometheus.Labels{
+			"audience": audience,
+		}).Inc()
 		var err error
 		ts, err = idtoken.NewTokenSource(context.Background(), audience)
 		if err != nil {
 			log.Error(err, "Unable to get default TokenSource")
-			tokensourcesError.With(prometheus.Labels{"audience": audience}).Inc()
+			tokensourcesError.With(prometheus.Labels{
+				"audience": audience,
+			}).Inc()
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -241,6 +245,7 @@ func main() {
 	// Proxy requires Application Default Credentials to authenticate with Google
 	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
 		log.Error(nil, "Unable to find GOOGLE_APPLICATION_CREDENTIALS in the environment")
+		os.Exit(1)
 	}
 
 	// Create Prometheus 'static' counter for build config
