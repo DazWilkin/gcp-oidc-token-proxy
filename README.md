@@ -47,6 +47,11 @@ A way to configure Prometheus to scrape services deployed to [Google Cloud Platf
 + [Cloud Run service](#cloud-run-service)
 + [Service Account](#service-account)
 + [Run](#run)
+  + [Kubernetes](#kubernetes)
+  + [Docker Compose](#docker-compose)
+  + [Docker](#docker)
+  + [Podman](#podman)
++ [Prometheus](#prometheus)
 
 ## Background
 
@@ -288,6 +293,72 @@ do
 done
 ```
 
+### [Podman](https://podman.io)
+
+```bash
+ACCOUNT="..."
+ENDPOINT="..."
+
+POD="foo"
+SECRET="${ACCOUNT}"
+
+podman secret create ${SECRET} ${PWD}/${ACCOUNT}.json
+
+podman pod create \
+--name=${POD} \
+--publish=9091:9090 \
+--publish=7776:7777
+
+# File: prometheus.yml
+# Update audience and target-url values to reflect the Cloud Run service URL
+PROMETHEUS=$(mktemp)
+
+# Important
+chmod go+r ${PROMETHEUS}
+
+sed \
+--expression="s|some-service-xxxxxxxxxx-xx.a.run.app|${ENDPOINT}|g" \
+${PWD}/prometheus.yml > ${PROMETHEUS}
+
+# Prometheus
+podman run \
+--detach --rm --tty \
+--pod=${POD} \
+--name=prometheus \
+--volume=${PROMETHEUS}:/etc/prometheus/prometheus.yml \
+docker.io/prom/prometheus:v2.30.2 \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --web.enable-lifecycle
+
+# GCP OIDC Token Proxy
+podman run \
+--detach --rm \
+--pod=${POD} \
+--name=gcp-oidc-token-proxy \
+--secret=${SECRET} \
+--env=GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/${SECRET} \
+ghcr.io/dazwilkin/gcp-oidc-token-proxy:ec8fa9d9ab1b7fa47448ff32e34daa0c3d211a8d \
+  --port=7777
+```
+
+Once the containers are running, you should be able to browse Prometheus' UI on `localhost:9090` and the OIDC Token Proxy's metrics on `localhost:7777`.
+
+To check logs:
+
+```bash
+NAME="prometheus" # Or "gcp-oidc-token-proxy"
+podman container logs ${NAME}
+```
+
+When done:
+
+```bash
+podman pod stop ${POD} && \
+podman pod rm ${POD}
+
+podman secret rm ${SECRET}
+```
+
 ## Prometheus
 
 The Prometheus configuration file (`prometheus.yml`) needs to include an `[OAuth]` section that points to the proxy.
@@ -319,7 +390,7 @@ The proxy exports metrics too and these can be included:
     - "gcp-oidc-token-proxy:7777"
 ```
 
-## Scrape
+### Targets
 
 ![Prometheus: Targets](/images/prometheus.targets.png)
 
