@@ -1,6 +1,7 @@
 # OIDC Token Proxy for [GCP](https://cloud.google.com)
 
 [![build-container](https://github.com/DazWilkin/gcp-oidc-token-proxy/actions/workflows/build-container.yml/badge.svg)](https://github.com/DazWilkin/gcp-oidc-token-proxy/actions/workflows/build-container.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/DazWilkin/gcp-oidc-token-proxy.svg)](https://pkg.go.dev/github.com/DazWilkin/gcp-oidc-token-proxy)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dazwilkin/gcp-oidc-token-proxy)](https://goreportcard.com/report/github.com/dazwilkin/gcp-oidc-token-proxy)
 
 A way to configure Prometheus to scrape services deployed to [Google Cloud Platform (GCP)](https://cloud.google.com) that require authentication (using Google-minted OpenID Connect ID Tokens).
