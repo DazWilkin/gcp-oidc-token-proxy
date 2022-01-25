@@ -242,12 +242,6 @@ func main() {
 
 	flag.Parse()
 
-	// Proxy requires Application Default Credentials to authenticate with Google
-	if os.Getenv("GOOGLE_APPLICATION_CREDENTIALS") == "" {
-		log.Error(nil, "Unable to find GOOGLE_APPLICATION_CREDENTIALS in the environment")
-		os.Exit(1)
-	}
-
 	// Create Prometheus 'static' counter for build config
 	log.Info("Build config",
 		"build_time", BuildTime,
