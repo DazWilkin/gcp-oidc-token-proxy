@@ -7,7 +7,7 @@ require (
 	github.com/go-logr/stdr v1.2.2
 	github.com/prometheus/client_golang v1.14.0
 	golang.org/x/oauth2 v0.4.0
-	google.golang.org/api v0.106.0
+	google.golang.org/api v0.109.0
 )
 
 require (
