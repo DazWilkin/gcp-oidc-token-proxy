@@ -21,7 +21,7 @@ services:
     restart: always
     depends_on:
     - prometheus
-    image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:6ebbba0456f0a627be12b22ae136efc3968f315d
+    image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:200a9290e40952c51905a7ce35700cd616ac16cd
     container_name: gcp-oidc-token-proxy
     command:
       - --port=7777
