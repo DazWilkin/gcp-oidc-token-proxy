@@ -108,6 +108,16 @@ var (
 	tokens       = map[string]*oauth2.Token{}
 )
 
+// handler is a function that is invoked by Prometheus when it needs an access token
+// The frequency of these requests is a combination of:
+// Any existing access token's expiry
+// And the scrape interval of the target
+// The expiry of an access token is only checked when the target is scraped.
+// Tokens are issued greedily (within 30-minutes of expiry) in order to ensure that
+// Prometheus doesn't try to scrape a target just before the token expires
+// If this happens, the token expires, the request to the target fails
+// And Prometheus marks the target as 401 (Unauthorized)
+// And doesn't appear to retry scraping the target
 func handler(w http.ResponseWriter, r *http.Request) {
 	log := log.WithName("handler")
 
@@ -171,9 +181,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// Is a token for this audience cached?
 	tok, ok := tokens[audience]
 
-	// if ok but the token has expired, then it's really not ok
+	// if ok but the token is within 30-minutes (<=30m) of expiry
+	// then it's possibyy (!) not ok and a new token should be issued
+	// It's possible that Prometheus attempts to scrape this target just before expiry
+	// If it scrapes and the request to the target fails, Prometheus marks it 401 (Unauthorized)
+	// And doesn't appear to attempt to scrape it again
+	// To overcome this, a very lax (30-minute) grace period is used to hopefully overcome the issue
 	if ok {
-		if tok.Expiry.Before(time.Now()) {
+		if tok.Expiry.Before(time.Now().Add(30 * time.Minute)) {
+			log.Info("Token has expired")
 			ok = false
 		}
 	}
@@ -198,6 +214,9 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// The response isn't quite oauth2.Token
 	// https://pkg.go.dev/golang.org/x/oauth2#Token
 	// Cloud Run accepts e.g. --header="Authorization: Bearer $(gcloud auth print-identity-token)"
+	// Token Expiry is a time and so ExpiresIn is calculated here (correctly) as the time to expiry
+	// When Prometheus receives this response, parses and processes it, the ExpiresIn could be "off"
+	// However, the proxy can't know this time and should not adjust ExpiresIn to accommodate it
 	log.Info("Creating response")
 	resp := struct {
 		AccessToken  string `json:"access_token"`
