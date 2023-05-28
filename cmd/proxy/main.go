@@ -108,16 +108,20 @@ var (
 	tokens       = map[string]*oauth2.Token{}
 )
 
+type Response struct {
+	AccessToken  string `json:"access_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
+	Scope        string `json:"scope"`
+	TokenType    string `json:"token_type"`
+}
+
 // handler is a function that is invoked by Prometheus when it needs an access token
-// The frequency of these requests is a combination of:
-// Any existing access token's expiry
-// And the scrape interval of the target
-// The expiry of an access token is only checked when the target is scraped.
-// Tokens are issued greedily (within 30-minutes of expiry) in order to ensure that
-// Prometheus doesn't try to scrape a target just before the token expires
-// If this happens, the token expires, the request to the target fails
-// And Prometheus marks the target as 401 (Unauthorized)
-// And doesn't appear to retry scraping the target
+// Prometheus times these requests through a combination of:
+// 1. Initial requests to a new e.g. Cloud Run service
+// 2. A timer expiring based on the ExpiresIn value of an existing token
+// The handler requests tokens greedily (within 30-minutes of expiry) in order to ensure that
+// When Prometheus requests a token, new tokens are minted if <30m even if not expired
 func handler(w http.ResponseWriter, r *http.Request) {
 	log := log.WithName("handler")
 
@@ -182,14 +186,15 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	tok, ok := tokens[audience]
 
 	// if ok but the token is within 30-minutes (<=30m) of expiry
-	// then it's possibyy (!) not ok and a new token should be issued
-	// It's possible that Prometheus attempts to scrape this target just before expiry
-	// If it scrapes and the request to the target fails, Prometheus marks it 401 (Unauthorized)
-	// And doesn't appear to attempt to scrape it again
-	// To overcome this, a very lax (30-minute) grace period is used to hopefully overcome the issue
+	// then issue a new token
+	// Give Prometheus benefit of the doubt when requesting tokens (by invoking this handler)
 	if ok {
-		if tok.Expiry.Before(time.Now().Add(30 * time.Minute)) {
-			log.Info("Token has expired")
+		now := time.Now()
+		if tok.Expiry.Before(now.Add(30 * time.Minute)) {
+			log.Info("Token considered expired",
+				"Now", now,
+				"Expiry", tok.Expiry,
+			)
 			ok = false
 		}
 	}
@@ -218,15 +223,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	// When Prometheus receives this response, parses and processes it, the ExpiresIn could be "off"
 	// However, the proxy can't know this time and should not adjust ExpiresIn to accommodate it
 	log.Info("Creating response")
-	resp := struct {
-		AccessToken  string `json:"access_token"`
-		ExpiresIn    int    `json:"expires_in"`
-		RefreshToken string `json:"refresh_token"`
-		Scope        string `json:"scope"`
-		TokenType    string `json:"token_type"`
-	}{
+	expiresIn := int(time.Until(tok.Expiry).Seconds())
+	log.Info("Expiry",
+		"ExpiresIn", expiresIn,
+	)
+	resp := Response{
 		AccessToken:  tok.AccessToken,
-		ExpiresIn:    int(time.Until(tok.Expiry).Seconds()),
+		ExpiresIn:    expiresIn,
 		RefreshToken: tok.AccessToken,
 		TokenType:    "bearer",
 		Scope:        "https://www.googleapis.com/auth/cloud-platform",
