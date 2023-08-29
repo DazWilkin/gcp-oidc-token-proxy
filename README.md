@@ -1,6 +1,6 @@
 # OIDC Token Proxy for [GCP](https://cloud.google.com)
 
-[![build-container](https://github.com/DazWilkin/gcp-oidc-token-proxy/actions/workflows/build-container.yml/badge.svg)](https://github.com/DazWilkin/gcp-oidc-token-proxy/actions/workflows/build-container.yml)
+[![build-container](https://github.com/DazWilkin/gcp-oidc-token-proxy/actions/workflows/build.yaml/badge.svg)](https://github.com/DazWilkin/gcp-oidc-token-proxy/actions/workflows/build.yaml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/DazWilkin/gcp-oidc-token-proxy.svg)](https://pkg.go.dev/github.com/DazWilkin/gcp-oidc-token-proxy)
 [![Go Report Card](https://goreportcard.com/badge/github.com/dazwilkin/gcp-oidc-token-proxy)](https://goreportcard.com/report/github.com/dazwilkin/gcp-oidc-token-proxy)
 
