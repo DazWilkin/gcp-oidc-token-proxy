@@ -1,4 +1,4 @@
-ARG GOLANG_VERSION="1.18"
+ARG GOLANG_VERSION="1.12.0"
 ARG PROJECT="gcp-oidc-token-proxy"
 
 ARG COMMIT
@@ -28,18 +28,12 @@ RUN BUILD_TIME=$(date +%s) && \
     -o /bin/proxy \
     ./cmd/proxy
 
-# RUN useradd --uid=10001 scratchuser
 
-
-FROM scratch
+FROM gcr.io/distroless/cc
 
 LABEL org.opencontainers.image.source https://github.com/DazWilkin/gcp-oidc-token-proxy
 
 COPY --from=build /bin/proxy /
-COPY --from=build /etc/passwd /etc/passwd
-COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-
-# USER scratchuser
 
 ENTRYPOINT ["/proxy"]
 CMD ["--port=7777"]
