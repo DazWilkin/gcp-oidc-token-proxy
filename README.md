@@ -32,7 +32,6 @@ A way to configure Prometheus to scrape services deployed to [Google Cloud Platf
 >   static_configs:
 >   - targets:
 >     - "some-service-yyyyyyyyyy-yy.a.run.app:443"
-
 > ```
 >
 > **NOTE**
