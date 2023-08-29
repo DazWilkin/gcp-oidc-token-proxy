@@ -26,7 +26,7 @@ spec:
             mountPath: /etc/prometheus
             readOnly: true
         - name: gcp-oidc-token-proxy
-          image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:33763dcc975edac9b5c1799ccdab299d30e746cc
+          image: ghcr.io/dazwilkin/gcp-oidc-token-proxy:2aa9665a3229f60a6d6da3e947a56a224d9bd61b
           imagePullPolicy: Always
           env:
           - name: GOOGLE_APPLICATION_CREDENTIALS
