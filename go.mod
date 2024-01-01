@@ -3,7 +3,7 @@ module github.com/DazWilkin/gcp-oidc-token-proxy
 go 1.21.0
 
 require (
-	github.com/go-logr/logr v1.3.0
+	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/stdr v1.2.2
 	github.com/prometheus/client_golang v1.17.0
 	golang.org/x/oauth2 v0.15.0
