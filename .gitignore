@@ -3,3 +3,11 @@ google.md
 
 # Service Account key(s)
 *.json
+
+# Issues -- private documentation
+issues/**
+
+# Prometheus configs
+prometheus.*.yaml
+
+test.sh
