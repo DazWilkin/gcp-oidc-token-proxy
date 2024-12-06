@@ -10,4 +10,7 @@ issues/**
 # Prometheus configs
 prometheus.*.yaml
 
+# Sigstore
+cosign.key
+
 test.sh
