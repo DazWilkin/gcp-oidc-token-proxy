@@ -271,7 +271,7 @@ docker run \
 --publish=7777:7777 \
 --volume=${PWD}/${ACCOUNT}.json:/secrets/key.json \
 --env=GOOGLE_APPLICATION_CREDENTIALS=/secrets/key.json \
-ghcr.io/dazwilkin/gcp-oidc-token-proxy:1ae6c43442ab345683c5da917f1ad58cdc9b2c8d \
+ghcr.io/dazwilkin/gcp-oidc-token-proxy:b762fb585228f62e903fe1223a72136ca4dbaf02 \
   --port=7777
 ```
 
@@ -337,7 +337,7 @@ podman run \
 --name=gcp-oidc-token-proxy \
 --secret=${SECRET} \
 --env=GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/${SECRET} \
-ghcr.io/dazwilkin/gcp-oidc-token-proxy:1ae6c43442ab345683c5da917f1ad58cdc9b2c8d \
+ghcr.io/dazwilkin/gcp-oidc-token-proxy:b762fb585228f62e903fe1223a72136ca4dbaf02 \
   --port=7777
 ```
 
