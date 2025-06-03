@@ -143,7 +143,10 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.ParseForm()
+	if err := r.ParseForm(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// Expect FORM property: audience
 	audiences, ok := r.PostForm["audience"]
@@ -245,7 +248,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Done
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprint(w, string(j))
+	if _, err := fmt.Fprint(w, string(j)); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	log.Info("Done")
 }
 
