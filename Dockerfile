@@ -1,4 +1,4 @@
-ARG GOLANG_VERSION="1.24"
+ARG GOLANG_VERSION="1.24.3"
 
 ARG PROJECT="gcp-oidc-token-proxy"
 
