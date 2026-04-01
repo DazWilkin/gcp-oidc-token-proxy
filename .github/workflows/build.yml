@@ -48,7 +48,7 @@ jobs:
         run: echo "VERSION=$(uname --kernel-release)" >> ${GITHUB_ENV}
       - name: docker-build-push-multi-platform
         id: docker-build-push-multi-platform
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
